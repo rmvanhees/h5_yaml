@@ -1,9 +1,7 @@
 # H5_YAML
 
-## Name
-Use YAML configuration file to generate HDF5/netCDF4 formated files.
-
 ## Description
+Use YAML configuration file to generate HDF5/netCDF4 formated files.
 
 ## Installation [TBW]
 
@@ -15,16 +13,19 @@ The YAML file should be structured as follows:
  * The section 'groups' are optional, but you should provide each group you want to use
    in your file. The 'groups' section in the YAML file may look like this:
 
+   ```
    groups:
      - engineering_data
      - image_attributes
      - navigation_data
      - processing_control
      - science_data
+   ```
 
  * The section 'dimensions' is obligatory, you shouold define the dimensions for each
    variable in your file. The 'dimensions' section may look like this:
 
+   ```
    dimensions:
      days:
        _dtype: u4
@@ -51,12 +52,14 @@ The YAML file should be structured as follows:
        _values: [-50, -20, 0, 20, 50]
        long_name: along-track view angles at sensor
        units: degrees
+   ```
 
  * The 'compounds' are optional, but you should provide each compound data-type which
    you want to use in your file. For each compound element you have to provide its
    data-type and attributes: units and long_name. The 'compound' section may look like
    this:
 
+   ```
    compounds:
      stats_dtype:
        time: [u8, seconds since 1970-01-01T00:00:00, timestamp]
@@ -70,6 +73,7 @@ The YAML file should be structured as follows:
        avg: [f4, '1', '$S - S_{ref}$']
        unc: [f4, '1', '\u03c3($S - S_{ref}$)']
        dark_offs: [f4, '1', dark-offset]
+   ```
 
    Alternatively, provide a list with names of YAML files which contain the definitions
    of the compounds.
@@ -83,6 +87,7 @@ The YAML file should be structured as follows:
    ('_vlen'). In addition, each variable can have as many attributes as you like,
    defined by its name and value. The 'variables' section may look like this:
 
+   ```
    variables:
      /image_attributes/nr_coadditions:
        _dtype: u2
@@ -102,6 +107,7 @@ The YAML file should be structured as follows:
        _vlen: True
        _dims: [days]
        comment: detector map statistics (MPS=163)
+   ```
 
 ### Notes and ToDo:
 
@@ -113,9 +119,7 @@ The YAML file should be structured as follows:
 
 ## Roadmap
 
- * Release v0.1 : stable API to write level-1A products
- * Release v0.5 : stable API to read raw Tango (Carbon/Nitro) instrument data
- * Release v1.0 : operational Tango level-0 - level-1A processor
+ * Release v0.1 : stable API to read your YAML files and generate the HDF5/netCDF4 file
 
 
 ## Authors and acknowledgment
