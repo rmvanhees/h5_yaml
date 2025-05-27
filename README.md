@@ -3,7 +3,8 @@
 ## Description
 Use YAML configuration file to generate HDF5/netCDF4 formated files.
 
-## Installation [TBW]
+## Installation
+Relases of the code, starting from version 0.1, will be made available via PyPi.
 
 ## Usage
 
