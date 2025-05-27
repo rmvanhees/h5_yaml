@@ -1,0 +1,95 @@
+# pyproject.toml
+[build-system]
+requires = [
+   "hatchling",
+   "versioningit",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "h5_yaml"
+description = "Use YAML configuration file to generate HDF5/netCDF4 formated files."
+readme = "README.md"
+license = "BSD-3-Clause"
+authors = [
+  {name = "Richard van Hees", email = "r.m.van.hees@sron.nl"}
+]
+requires-python = ">=3.12"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Atmospheric Science",
+]
+keywords = [
+  "HDF5", "netCDF4", "YAML"
+]
+dynamic = [
+  "version",
+]
+dependencies = [
+  "h5py>=3.13",
+  "netCDF4>=1.7",
+  "numpy>=2.2",
+  "pyYAML>=6.0",
+]
+
+[project.scripts]
+
+
+[project.urls]
+Homepage = "https://github.com/rmvanhees/h5_yaml"
+Source = "https://github.com/rmvanhees/h5_yaml"
+Issues = "https://github.com/rmvanhees/h5_yaml/issues"
+# Changelog = "https://github.com/rmvanhees/h5_yaml/ChangeLog"
+# Documentation = "https://h5_yaml.readthedocs.io/en/stable/"
+
+[tool.hatch.build.targets.sdist]
+
+[tool.hatch.version]
+source = "versioningit"
+
+[tool.versioningit]
+
+[tool.versioningit.next-version]
+method = "smallest"
+
+[tool.versioningit.format]
+distance = "{next_version}.dev{distance}+{vcs}{rev}"
+dirty = "{base_version}+d{build_date:%Y%m%d}"
+distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.d{build_date:%Y%m%d}"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "D",    # pydocstyle
+  "E",    # pycodestyle
+  "F",    # pyflakes
+  "I",    # isort
+  "N",    # pep8-naming
+  "W",    # pycodestyle
+  "ANN",  # flake8-annotations
+  "B",    # flake8-bugbear
+  "ISC",  # flake8-implicit-str-concat
+  "PGH",  # flake8-pie
+  "PYI",  # flake8-pyi
+  "Q",    # flake8-quotes
+  "SIM",  # flake8-simplify
+  "TID",  # flake8-tidy-imports
+  "TCH",  # flake8-type-checking
+  "NPY",  # NumPy-specific
+  "PERF", # Perflint
+  "RUF",  # Ruff Specific
+  "UP",   # pyupgrade
+]
+ignore = ["D203", "D213"]
+
+[lint.pydocstyle]
+convention = "pep257"
