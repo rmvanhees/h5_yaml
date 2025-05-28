@@ -1,5 +1,5 @@
 #
-# This file is part of h5_yaml:
+# This file is part of h5_yaml
 #    https://github.com/rmvanhees/h5_yaml.git
 #
 # Copyright (c) 2025 SRON
@@ -7,35 +7,37 @@
 #
 # License:  BSD-3-Clause
 #
-"""Create HDF5/netCDF4 formatted file from a YAML configuration file using netCDF4."""
+"""Create HDF5/netCDF4 formatted file from a YAML configuration file using h5py."""
 
 from __future__ import annotations
 
-__all__ = ["NcYaml"]
+__all__ = ["H5Yaml"]
 
 import logging
 from importlib.resources import files
-from typing import TYPE_CHECKING
+from pathlib import Path
 
+import h5py
 import numpy as np
 
-# pylint: disable=no-name-in-module
-from netCDF4 import Dataset
-
-from h5_yaml.conf_from_yaml import conf_from_yaml
-from h5_yaml.lib.chunksizes import guess_chunks
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from h5yaml.conf_from_yaml import conf_from_yaml
+from h5yaml.lib.chunksizes import guess_chunks
 
 
 # - class definition -----------------------------------
-class NcYaml:
-    """Class to create a HDF5/netCDF4 formated file from a YAML configuration file."""
+class H5Yaml:
+    """Class to create a HDF5/netCDF4 formated file from a YAML configuration file.
 
-    def __init__(self: NcYaml, h5_yaml_fl: Path) -> None:
-        """Construct a NcYaml instance."""
-        self.logger = logging.getLogger("h5_yaml.NcYaml")
+    Parameters
+    ----------
+    h5_yaml_fl :  Path
+       YAML files with the HDF5 format definition
+
+    """
+
+    def __init__(self: H5Yaml, h5_yaml_fl: Path) -> None:
+        """Construct a H5Yaml instance."""
+        self.logger = logging.getLogger("h5yaml.H5Yaml")
 
         try:
             self._h5_def = conf_from_yaml(h5_yaml_fl)
@@ -44,35 +46,54 @@ class NcYaml:
 
         self.yaml_dir = h5_yaml_fl.parent
 
-    def __groups(self: NcYaml, fid: Dataset) -> None:
+    def __groups(self: H5Yaml, fid: h5py.File) -> None:
         """Create groups in HDF5 product."""
         for key in self.h5_def["groups"]:
-            _ = fid.createGroup(key)
+            _ = fid.create_group(key)
 
-    def __dimensions(self: NcYaml, fid: Dataset) -> None:
+    def __dimensions(self: H5Yaml, fid: h5py.File) -> None:
         """Add dimensions to HDF5 product."""
         for key, value in self.h5_def["dimensions"].items():
-            _ = fid.createDimension(key, value["_size"])
-
-            if "long_name" not in value:
-                continue
-
             fillvalue = None
             if "_FillValue" in value:
                 fillvalue = (
                     np.nan if value["_FillValue"] == "NaN" else int(value["_FillValue"])
                 )
 
-            dset = fid.createVariable(
-                key,
-                value["_dtype"],
-                dimensions=(key,),
-                fill_value=fillvalue,
-                contiguous=value["_size"] != 0,
-            )
-            dset.setncatts({k: v for k, v in value.items() if not k.startswith("_")})
+            if value["_size"] == 0:
+                ds_chunk = value.get("_chunks", (50,))
+                dset = fid.create_dataset(
+                    key,
+                    shape=(0,),
+                    dtype=(
+                        h5py.string_dtype()
+                        if value["_dtype"] == "str"
+                        else value["_dtype"]
+                    ),
+                    chunks=ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk),
+                    maxshape=(None,),
+                    fillvalue=fillvalue,
+                )
+            else:
+                dset = fid.create_dataset(
+                    key,
+                    shape=(value["_size"],),
+                    dtype=value["_dtype"],
+                )
+                if "_values" in value:
+                    dset[:] = value["_values"]
 
-    def __compounds(self: NcYaml, fid: Dataset) -> dict[str, str | int | float]:
+            dset.make_scale(
+                Path(key).name
+                if "long_name" in value
+                else "This is a netCDF dimension but not a netCDF variable."
+            )
+            for attr, attr_val in value.items():
+                if attr.startswith("_"):
+                    continue
+                dset.attrs[attr] = attr_val
+
+    def __compounds(self: H5Yaml, fid: h5py.File) -> dict[str, str | int | float]:
         """Add compound datatypes to HDF5 product."""
         if "compounds" not in self.h5_def:
             return {}
@@ -104,33 +125,30 @@ class NcYaml:
                     compounds[key]["units"].append(_val[1])
                 compounds[key]["names"].append(_val[2] if len(_val) == 3 else _val[1])
 
-            comp_t = np.dtype(compounds[key]["dtype"])
-            _ = fid.createCompoundType(comp_t, key)
+            fid[key] = np.dtype(compounds[key]["dtype"])
 
         return compounds
 
     def __variables(
-        self: NcYaml,
-        fid: Dataset,
-        compounds: dict[str, str | int | float] | None,
+        self: H5Yaml, fid: h5py.File, compounds: dict[str, str | int | float] | None
     ) -> None:
         """Add datasets to HDF5 product.
 
         Parameters
         ----------
-        fid :  netCDF4.Dataset
+        fid :  h5py.File
            HDF5 file pointer (mode 'r+')
         compounds :  dict[str, str | int | float]
            Definition of the compound(s) in the product
 
         """
         for key, val in self.h5_def["variables"].items():
-            if val["_dtype"] in fid.cmptypes:
-                ds_dtype = fid.cmptypes[val["_dtype"]].dtype
-                sz_dtype = ds_dtype.itemsize
+            if val["_dtype"] in fid:
+                ds_dtype = fid[val["_dtype"]]
+                dtype_size = fid[val["_dtype"]].dtype.itemsize
             else:
                 ds_dtype = val["_dtype"]
-                sz_dtype = np.dtype(val["_dtype"]).itemsize
+                dtype_size = np.dtype(val["_dtype"]).itemsize
 
             fillvalue = None
             if "_FillValue" in val:
@@ -139,17 +157,17 @@ class NcYaml:
                 )
 
             compression = None
-            complevel = 0
+            shuffle = False
             # currently only gzip compression is supported
             if "_compression" in val:
-                compression = "zlib"
-                complevel = val["_compression"]
+                compression = val["_compression"]
+                shuffle = True
 
             n_udim = 0
             ds_shape = ()
             ds_maxshape = ()
             for coord in val["_dims"]:
-                dim_sz = fid.dimensions[coord].size
+                dim_sz = fid[coord].size
                 n_udim += int(dim_sz == 0)
                 ds_shape += (dim_sz,)
                 ds_maxshape += (dim_sz if dim_sz > 0 else None,)
@@ -160,43 +178,46 @@ class NcYaml:
 
             # obtain chunk-size settings
             ds_chunk = (
-                val["_chunks"] if "_chunks" in val else guess_chunks(ds_shape, sz_dtype)
+                val["_chunks"]
+                if "_chunks" in val
+                else guess_chunks(ds_shape, dtype_size)
             )
 
             # create the variable
             if ds_chunk == "contiguous":
-                dset = fid.createVariable(
+                dset = fid.create_dataset(
                     key,
-                    val["_dtype"],
-                    dimensions=(key,),
-                    fill_value=fillvalue,
-                    contiguous=True,
+                    ds_shape,
+                    dtype=ds_dtype,
+                    chunks=None,
+                    maxshape=None,
+                    fillvalue=fillvalue,
                 )
             else:
                 if val.get("_vlen"):
-                    if val["_dtype"] in fid.cmptypes:
-                        raise ValueError("can not have vlen with compounds")
-                    val["_dtype"] = fid.createVLType(ds_dtype, val["_dtype"])
+                    ds_dtype = h5py.vlen_dtype(ds_dtype)
                     fillvalue = None
                     if ds_maxshape == (None,):
                         ds_chunk = (16,)
 
-                if key in fid.cmptypes:
-                    val["_dtype"] = fid.cmptypes[key]
-
-                dset = fid.createVariable(
+                dset = fid.create_dataset(
                     key,
-                    val["_dtype"],
-                    dimensions=val["_dims"],
-                    fill_value=fillvalue,
-                    contiguous=False,
+                    ds_shape,
+                    dtype=ds_dtype,
+                    chunks=ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk),
+                    maxshape=ds_maxshape,
+                    fillvalue=fillvalue,
                     compression=compression,
-                    complevel=complevel,
-                    chunksizes=(
-                        ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk)
-                    ),
+                    shuffle=shuffle,
                 )
-            dset.setncatts({k: v for k, v in val.items() if not k.startswith("_")})
+
+            for ii, coord in enumerate(val["_dims"]):
+                dset.dims[ii].attach_scale(fid[coord])
+
+            for attr, attr_val in val.items():
+                if attr.startswith("_"):
+                    continue
+                dset.attrs[attr] = attr_val
 
             if compounds is not None and val["_dtype"] in compounds:
                 if compounds[val["_dtype"]]["units"]:
@@ -205,11 +226,11 @@ class NcYaml:
                     dset.attrs["long_name"] = compounds[val["_dtype"]]["names"]
 
     @property
-    def h5_def(self: NcYaml) -> dict:
+    def h5_def(self: H5Yaml) -> dict:
         """Return definition of the HDF5/netCDF4 product."""
         return self._h5_def
 
-    def create(self: NcYaml, l1a_name: Path | str) -> None:
+    def create(self: H5Yaml, l1a_name: Path | str) -> None:
         """Create a HDF5/netCDF4 file (overwrite if exist).
 
         Parameters
@@ -219,7 +240,7 @@ class NcYaml:
 
         """
         try:
-            with Dataset(l1a_name, "w") as fid:
+            with h5py.File(l1a_name, "w") as fid:
                 self.__groups(fid)
                 self.__dimensions(fid)
                 self.__variables(fid, self.__compounds(fid))
@@ -230,8 +251,8 @@ class NcYaml:
 # - test module -------------------------
 def tests() -> None:
     """..."""
-    print("Calling NcYaml")
-    NcYaml(files("h5_yaml.Data") / "h5_testing.yaml").create("test_yaml.nc")
+    print("Calling H5Yaml")
+    H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create("test_yaml.h5")
 
 
 if __name__ == "__main__":
