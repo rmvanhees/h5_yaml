@@ -14,63 +14,14 @@ from __future__ import annotations
 __all__ = ["H5Yaml"]
 
 import logging
+from importlib.resources import files
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import h5py
 import numpy as np
 
-from .conf_from_yaml import conf_from_yaml
-
-if TYPE_CHECKING:
-    from numpy.typing import ArrayLike
-
-# - global parameters ------------------------------
-
-
-# - local functions --------------------------------
-def days_since_2024(date_first: np.datetime64 | str) -> int:
-    """Return number of days since 2024-01-01."""
-    if isinstance(date_first, str):
-        date_first = np.datetime64(date_first)
-    ref_date = np.datetime64("2024-01-01")
-    one_day = np.timedelta64(1, "D")
-    return (date_first - ref_date) // one_day
-
-
-def guess_chunks(dims: ArrayLike[int], dtype_sz: int) -> str | tuple[int]:
-    """Perform an educated guess for the dataset chunk sizes.
-
-    Parameters
-    ----------
-    dims :  ArrayLike[int]
-       Dimensions of the variable
-    dtype_sz :  int
-       The element size of the data-type of the variable
-
-    Returns
-    -------
-    "contiguous" or tuple with chunk-sizes
-
-    """
-    fixed_size = dtype_sz
-    for val in [x for x in dims if x > 0]:
-        fixed_size *= val
-
-    if 0 in dims:  # variable with an unlimited dimension
-        udim = dims.index(0)
-    else:  # variable has no unlimited dimension
-        udim = 0
-        if fixed_size < 65536:
-            return "contiguous"
-
-    if len(dims) == 1:
-        return (1024,)
-
-    res = list(dims)
-    res[udim] = min(1024, (2048 * 1024) // (fixed_size // max(1, dims[0])))
-
-    return tuple(res)
+from h5_yaml.conf_from_yaml import conf_from_yaml
+from h5_yaml.lib.chunksizes import guess_chunks
 
 
 # - class definition -----------------------------------
@@ -131,10 +82,6 @@ class H5Yaml:
                 )
                 if "_values" in value:
                     dset[:] = value["_values"]
-                elif "_range" in value:
-                    dset[:] = np.arange(*value["_range"], dtype=value["_dtype"])
-                else:
-                    dset[:] = np.arange(value["_size"], dtype=value["_dtype"])
 
             dset.make_scale(
                 Path(key).name
@@ -148,8 +95,10 @@ class H5Yaml:
 
     def __compounds(self: H5Yaml, fid: h5py.File) -> dict[str, str | int | float]:
         """Add compound datatypes to HDF5 product."""
-        compounds = {}
+        if "compounds" not in self.h5_def:
+            return {}
 
+        compounds = {}
         if isinstance(self.h5_def["compounds"], list):
             file_list = self.h5_def["compounds"].copy()
             self.h5_def["compounds"] = {}
@@ -166,14 +115,12 @@ class H5Yaml:
         for key, value in self.h5_def["compounds"].items():
             compounds[key] = {
                 "dtype": [],
-                "fields": [],
                 "units": [],
                 "names": [],
             }
 
             for _key, _val in value.items():
                 compounds[key]["dtype"].append((_key, _val[0]))
-                compounds[key]["fields"].append(_key)
                 if len(_val) == 3:
                     compounds[key]["units"].append(_val[1])
                 compounds[key]["names"].append(_val[2] if len(_val) == 3 else _val[1])
@@ -183,9 +130,7 @@ class H5Yaml:
         return compounds
 
     def __variables(
-        self: H5Yaml,
-        fid: h5py.File,
-        compounds: dict[str, str | int | float] | None
+        self: H5Yaml, fid: h5py.File, compounds: dict[str, str | int | float] | None
     ) -> None:
         """Add datasets to HDF5 product.
 
@@ -199,10 +144,10 @@ class H5Yaml:
         """
         for key, val in self.h5_def["variables"].items():
             if val["_dtype"] in fid:
-                dtype_dset = fid[val["_dtype"]]
+                ds_dtype = fid[val["_dtype"]]
                 dtype_size = fid[val["_dtype"]].dtype.itemsize
             else:
-                dtype_dset = val["_dtype"]
+                ds_dtype = val["_dtype"]
                 dtype_size = np.dtype(val["_dtype"]).itemsize
 
             fillvalue = None
@@ -218,12 +163,18 @@ class H5Yaml:
                 compression = val["_compression"]
                 shuffle = True
 
+            n_udim = 0
             ds_shape = ()
             ds_maxshape = ()
             for coord in val["_dims"]:
                 dim_sz = fid[coord].size
+                n_udim += int(dim_sz == 0)
                 ds_shape += (dim_sz,)
                 ds_maxshape += (dim_sz if dim_sz > 0 else None,)
+
+            # currently, we can not handle more than one unlimited dimension
+            if n_udim > 1:
+                raise ValueError("more than one unlimited dimension")
 
             # obtain chunk-size settings
             ds_chunk = (
@@ -231,26 +182,30 @@ class H5Yaml:
                 if "_chunks" in val
                 else guess_chunks(ds_shape, dtype_size)
             )
+
             # create the variable
             if ds_chunk == "contiguous":
                 dset = fid.create_dataset(
                     key,
                     ds_shape,
+                    dtype=ds_dtype,
                     chunks=None,
                     maxshape=None,
-                    dtype=dtype_dset,
                     fillvalue=fillvalue,
                 )
             else:
                 if val.get("_vlen"):
-                    dtype_dset = h5py.vlen_dtype(dtype_dset)
+                    ds_dtype = h5py.vlen_dtype(ds_dtype)
+                    fillvalue = None
+                    if ds_maxshape == (None,):
+                        ds_chunk = (16,)
 
                 dset = fid.create_dataset(
                     key,
                     ds_shape,
+                    dtype=ds_dtype,
                     chunks=ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk),
                     maxshape=ds_maxshape,
-                    dtype=dtype_dset,
                     fillvalue=fillvalue,
                     compression=compression,
                     shuffle=shuffle,
@@ -265,9 +220,10 @@ class H5Yaml:
                 dset.attrs[attr] = attr_val
 
             if compounds is not None and val["_dtype"] in compounds:
-                dset.attrs["fields"] = compounds[val["_dtype"]]["fields"]
-                # dset.attrs["units"] = compounds[val["_dtype"]]["units"]
-                dset.attrs["long_name"] = compounds[val["_dtype"]]["names"]
+                if compounds[val["_dtype"]]["units"]:
+                    dset.attrs["units"] = compounds[val["_dtype"]]["units"]
+                if compounds[val["_dtype"]]["names"]:
+                    dset.attrs["long_name"] = compounds[val["_dtype"]]["names"]
 
     @property
     def h5_def(self: H5Yaml) -> dict:
@@ -283,11 +239,21 @@ class H5Yaml:
            Full name of the HDF5/netCDF4 file to be generated
 
         """
-        filename = l1a_name if isinstance(l1a_name, Path) else Path(l1a_name)
         try:
-            with h5py.File(filename, "w") as fid:
+            with h5py.File(l1a_name, "w") as fid:
                 self.__groups(fid)
                 self.__dimensions(fid)
                 self.__variables(fid, self.__compounds(fid))
         except PermissionError as exc:
             raise RuntimeError(f"failed create {l1a_name}") from exc
+
+
+# - test module -------------------------
+def tests() -> None:
+    """..."""
+    print("Calling H5Yaml")
+    H5Yaml(files("h5_yaml.Data") / "h5_testing.yaml").create("test_yaml.h5")
+
+
+if __name__ == "__main__":
+    tests()

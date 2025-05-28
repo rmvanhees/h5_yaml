@@ -12,8 +12,88 @@
 #
 # Define groups
 groups:
-  - engineering_data
-  - image_attributes
-  - navigation_data
-  - processing_control
-  - science_data
+  - group_00
+  - group_01
+  - group_02
+
+# Define dimensions
+# Note dimensions with an attribute 'long_name' will also be generated as variable
+dimensions:
+  number_of_images:
+    _dtype: u2
+    _size: 0
+  samples_per_image:
+    _dtype: u4
+    _size: 203500
+  column:
+    _dtype: u2
+    _size: 640
+  row:
+    _dtype: u2
+    _size: 512
+  time:
+    _dtype: f8
+    _size: 0
+    _FillValue: -32767
+    long_name: Attitude sample time (seconds of day)
+    calendar: proleptic_gregorian
+    units: seconds since %Y-%m-%d %H:%M:%S
+    valid_min: 0
+    valid_max: 92400
+
+# Define compound types
+# - compound elements must have a data-type, and can have a unit and long_name 
+compounds:
+  stats_dtype:
+    time: [u8, seconds since 1970-01-01T00:00:00, timestamp]
+    index: [u2, '1', index]
+    tbl_id: [u1, '1', binning id]
+    saa: [u1, '1', saa-flag]
+    coad: [u1, '1', co-addings]
+    texp: [f4, ms, exposure time]
+    lat: [f4, degree, latitude]
+    lon: [f4, degree, longitude]
+    avg: [f4, '1', '$S - S_{ref}$']
+    unc: [f4, '1', '\u03c3($S - S_{ref}$)']
+    dark_offs: [f4, '1', dark-offset]
+
+  geo_dtype:
+    lat: [f4, latitude]
+    lon: [f4, longitude]
+    
+# Define variables
+variables:
+  /group_00/detector_images:
+    _dtype: u2
+    _dims: [number_of_images, column, row]
+    _FillValue: 65535
+    long_name: Detector pixel values
+    comment: unbinned full-frame data
+    units: '1'
+    valid_min: 0
+    valid_max: 65534
+  /group_01/detector_images:
+    _dtype: u2
+    _dims: [number_of_images, samples_per_image]
+    _FillValue: 65535
+    _compression: 1
+    long_name: Detector pixel values
+    comment: variable binned data (filled to the largest samples_per_image)
+    units: '1'
+    valid_min: 0
+    valid_max: 65534
+  /group_01/stats:
+    _dtype: stats_dtype
+    _vlen: True
+    _dims: [time]
+    comment: detector map statistics
+  /group_02/detector_images:
+    _dtype: u2
+    _dims: [number_of_images]
+    _vlen: True
+    _FillValue: 65535
+    long_name: Detector pixel values
+    comment: variable binned (vlen) data
+    units: '1'
+    valid_min: 0
+    valid_max: 65534

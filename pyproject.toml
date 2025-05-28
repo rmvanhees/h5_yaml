@@ -48,6 +48,9 @@ Issues = "https://github.com/rmvanhees/h5_yaml/issues"
 # Changelog = "https://github.com/rmvanhees/h5_yaml/ChangeLog"
 # Documentation = "https://h5_yaml.readthedocs.io/en/stable/"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/h5_yaml"]
+
 [tool.hatch.build.targets.sdist]
 
 [tool.hatch.version]
