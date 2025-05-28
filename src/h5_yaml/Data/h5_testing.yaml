@@ -1,0 +1,19 @@
+# YAML
+#
+# Configuration file to test the implementation of classes H5Yaml and NcYaml
+#
+# This file is part of h5_yaml:
+#    https://github.com/rmvanhees/h5_yaml.git
+#
+# Copyright (c) 2025 SRON
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
+#
+# Define groups
+groups:
+  - engineering_data
+  - image_attributes
+  - navigation_data
+  - processing_control
+  - science_data

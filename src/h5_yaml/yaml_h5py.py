@@ -1,6 +1,6 @@
 #
 # This file is part of h5_yaml
-#    https://github.com/rmvanhees/h5_yaml.git"
+#    https://github.com/rmvanhees/h5_yaml.git
 #
 # Copyright (c) 2025 SRON
 #    All Rights Reserved
@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import h5py
 import numpy as np
 
-from .settings import conf_from_yaml
+from .conf_from_yaml import conf_from_yaml
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -182,7 +182,11 @@ class H5Yaml:
 
         return compounds
 
-    def __variables(self: H5Yaml, fid: h5py.File, compounds: dict) -> None:
+    def __variables(
+        self: H5Yaml,
+        fid: h5py.File,
+        compounds: dict[str, str | int | float] | None
+    ) -> None:
         """Add datasets to HDF5 product.
 
         Parameters
@@ -241,7 +245,6 @@ class H5Yaml:
                 if val.get("_vlen"):
                     dtype_dset = h5py.vlen_dtype(dtype_dset)
 
-                print(key, ds_shape, ds_chunk, ds_maxshape, dtype_size)
                 dset = fid.create_dataset(
                     key,
                     ds_shape,
@@ -261,10 +264,10 @@ class H5Yaml:
                     continue
                 dset.attrs[attr] = attr_val
 
-            # if val["_dtype"] in compounds:
-            #    dset.attrs["fields"] = compounds[val["_dtype"]]["fields"]
-            #    # dset.attrs["units"] = compounds[val["_dtype"]]["units"]
-            #    dset.attrs["long_name"] = compounds[val["_dtype"]]["names"]
+            if compounds is not None and val["_dtype"] in compounds:
+                dset.attrs["fields"] = compounds[val["_dtype"]]["fields"]
+                # dset.attrs["units"] = compounds[val["_dtype"]]["units"]
+                dset.attrs["long_name"] = compounds[val["_dtype"]]["names"]
 
     @property
     def h5_def(self: H5Yaml) -> dict:
