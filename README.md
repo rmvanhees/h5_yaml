@@ -3,6 +3,11 @@
 ## Description
 Use YAML configuration file to generate HDF5/netCDF4 formated files.
 
+The class `NcYaml` must be used when strict conformance to the netCDF4 format is
+required. However, the python netCDF4 implementation does not allow variable-length
+data to have a compound data-type. The class `H5Yaml` does not have this restiction
+and will generate HDF5 formated files which can be read by netCDF4 software.
+
 ## Installation
 Relases of the code, starting from version 0.1, will be made available via PyPi.
 
