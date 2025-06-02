@@ -1,4 +1,7 @@
 # H5_YAML
+[![Package Release](https://img.shields.io/pypi/v/h5yaml.svg?label=version)](https://github.com/rmvanhees/h5_yaml/)
+[![Package Status](https://img.shields.io/pypi/status/h5yaml.svg?label=status)](https://pypi.org/project/h5yaml/)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/h5yaml.svg?label=PyPI%20downloads)](https://pypi.org/project/h5yaml/)
 
 ## Description
 Use YAML configuration file to generate HDF5/netCDF4 formated files.
