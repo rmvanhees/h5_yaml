@@ -4,8 +4,8 @@
 [![PyPI Downloads](https://img.shields.io/pypi/dm/h5yaml.svg?label=PyPI%20downloads)](https://pypi.org/project/h5yaml/)
 
 ## Description
-This package let you generate HDF5/netCDF4 formatted files as defined in a YAML configuration file.
-This has several advantages: 
+This package let you generate [HDF5](https://docs.h5py.org/en/stable/)/[netCDF4](https://unidata.github.io/netcdf4-python/)
+formatted files as defined in a [YAML](https://yaml.org/) configuration file. This has several advantages: 
 
  * you define the layout of your HDF5/netCDF4 file using YAML which is human-readable and has intuitive syntax.
  * you can reuse the YAML configuration file to to have all your product have a consistent layout.
@@ -14,11 +14,12 @@ This has several advantages:
 
 The `H5YAML` package has two classes to generate a HDF5/netCDF4 formatted file.
 
- 1. The class `H5Yaml` uses the `h5py` package, which is a Pythonic interface to the HDF5 binary data format.
+ 1. The class `H5Yaml` uses the [h5py](https://pypi.org/project/h5py/) package, which is a Pythonic interface to
+    the HDF5 binary data format.
     Let 'h5_def.yaml' be your YAML configuration file then ```H5Yaml("h5_def.yaml").create("foo.h5")``` will create
 	the HDF5 file 'foo.h5'. This can be read by netCDF4 software, because it uses dimension-scales to each dataset.
- 2. The class `NcYaml` uses the `netCDF4` package, which provides an object-oriented python interface to the netCDF
-    version 4 library.
+ 2. The class `NcYaml` uses the [netCDF4](https://pypi.org/project/netCDF4/) package, which provides an object-oriented
+    python interface to the netCDF version 4 library.
     Let 'nc_def.yaml' be your YAML configuration file then ```NcYaml("nc_def.yaml").create("foo.nc")``` will create
 	the netCDF4/HDF5 file 'foo.nc'
 
@@ -27,7 +28,7 @@ However, package `netCDF4` has some limitations, which `h5py` has not, for examp
 not allow variable-length variables to have a compound data-type.
 
 ## Installation
-Releases of the code, starting from version 0.1, will be made available via PyPi.
+Releases of the code, starting from version 0.1, will be made available via PyPI.
 
 ## Usage
 
