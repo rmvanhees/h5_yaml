@@ -4,15 +4,15 @@
 [![PyPI Downloads](https://img.shields.io/pypi/dm/h5yaml.svg?label=PyPI%20downloads)](https://pypi.org/project/h5yaml/)
 
 ## Description
-Use YAML configuration file to generate HDF5/netCDF4 formated files.
+Use YAML configuration file to generate HDF5/netCDF4 formatted files.
 
 The class `NcYaml` must be used when strict conformance to the netCDF4 format is
 required. However, the python netCDF4 implementation does not allow variable-length
-data to have a compound data-type. The class `H5Yaml` does not have this restiction
-and will generate HDF5 formated files which can be read by netCDF4 software.
+data to have a compound data-type. The class `H5Yaml` does not have this restriction
+and will generate HDF5 formatted files which can be read by netCDF4 software.
 
 ## Installation
-Relases of the code, starting from version 0.1, will be made available via PyPi.
+Releases of the code, starting from version 0.1, will be made available via PyPi.
 
 ## Usage
 
@@ -31,7 +31,7 @@ The YAML file should be structured as follows:
      - science_data
    ```
 
- * The section 'dimensions' is obligatory, you shouold define the dimensions for each
+ * The section 'dimensions' is obligatory, you should define the dimensions for each
    variable in your file. The 'dimensions' section may look like this:
 
    ```
@@ -121,7 +121,7 @@ The YAML file should be structured as follows:
 ### Notes and ToDo:
 
  * The usage of older versions of h5py may result in broken netCDF4 files
- * Explain usage of parameter '_chunks', which is currently not correcly implemented.
+ * Explain usage of parameter '_chunks', which is currently not correctly implemented.
  * Explain that the usage of variable length data-sets may break netCDF4 compatibility
 
 ## Support [TBW]
