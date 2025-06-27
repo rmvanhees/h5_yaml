@@ -35,20 +35,28 @@ def guess_chunks(dims: ArrayLike[int], dtype_sz: int) -> str | tuple[int]:
 
     """
     fixed_size = dtype_sz
-    for val in [x for x in dims if x > 0]:
-        fixed_size *= val
+    if len(dims) > 1:
+        for val in [x for x in dims[1:] if x > 0]:
+            fixed_size *= val
 
-    if 0 in dims:  # variable with an unlimited dimension
-        udim = dims.index(0)
-    else:  # variable has no unlimited dimension
-        udim = 0
-        if fixed_size < 65536:
+    # first variables without an unlimited dimension
+    if 0 not in dims:
+        if fixed_size < 400000:
             return "contiguous"
 
+        res = list(dims)
+        res[0] = max(1, 2048000 // fixed_size)
+        return tuple(res)
+
+    # then variables with an unlimited dimension
     if len(dims) == 1:
         return (1024,)
 
+    udim = dims.index(0)
     res = list(dims)
-    res[udim] = min(1024, (2048 * 1024) // (fixed_size // max(1, dims[0])))
+    if fixed_size < 400000:
+        res[udim] = 1024
+    else:
+        res[udim] = max(1, 2048000 // fixed_size)
 
     return tuple(res)
