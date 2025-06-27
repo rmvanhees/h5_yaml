@@ -156,12 +156,19 @@ class H5Yaml:
                     np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
                 )
 
-            compression = None
-            shuffle = False
-            # currently only gzip compression is supported
-            if "_compression" in val:
-                compression = val["_compression"]
-                shuffle = True
+            # check for scalar dataset
+            if val["_dims"][0] == "scalar":
+                dset = fid.create_dataset(
+                    key,
+                    (),
+                    dtype=ds_dtype,
+                    fillvalue=fillvalue,
+                )
+                for attr, attr_val in val.items():
+                    if attr.startswith("_"):
+                        continue
+                    dset.attrs[attr] = attr_val
+                continue
 
             n_udim = 0
             ds_shape = ()
@@ -194,6 +201,13 @@ class H5Yaml:
                     fillvalue=fillvalue,
                 )
             else:
+                compression = None
+                shuffle = False
+                # currently only gzip compression is supported
+                if "_compression" in val:
+                    compression = val["_compression"]
+                    shuffle = True
+
                 if val.get("_vlen"):
                     ds_dtype = h5py.vlen_dtype(ds_dtype)
                     fillvalue = None
