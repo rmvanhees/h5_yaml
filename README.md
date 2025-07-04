@@ -1,7 +1,8 @@
 # H5YAML
-[![Package Release](https://img.shields.io/pypi/v/h5yaml.svg?label=version)](https://github.com/rmvanhees/h5_yaml/)
-[![Package Status](https://img.shields.io/pypi/status/h5yaml.svg?label=status)](https://pypi.org/project/h5yaml/)
-[![PyPI Downloads](https://img.shields.io/pypi/dm/h5yaml.svg?label=PyPI%20downloads)](https://pypi.org/project/h5yaml/)
+[![image](https://img.shields.io/pypi/v/h5yaml.svg?label=release)](https://github.com/rmvanhees/h5yaml/)
+[![image](https://img.shields.io/pypi/l/h5yaml.svg)](https://github.com/rmvanhees/h5yaml/LICENSE)
+[![image](https://img.shields.io/pypi/dm/h5yaml.svg)](https://pypi.org/project/h5yaml/)
+[![image](https://img.shields.io/pypi/status/h5yaml.svg?label=status)](https://pypi.org/project/h5yaml/)
 
 ## Description
 This package let you generate [HDF5](https://docs.h5py.org/en/stable/)/[netCDF4](https://unidata.github.io/netcdf4-python/)
