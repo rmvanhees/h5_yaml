@@ -24,6 +24,8 @@ from h5yaml.conf_from_yaml import conf_from_yaml
 from h5yaml.lib.chunksizes import guess_chunks
 
 
+# - helper function ------------------------------------
+    
 # - class definition -----------------------------------
 class H5Yaml:
     """Class to create a HDF5/netCDF4 formated file from a YAML configuration file.
@@ -231,7 +233,36 @@ class H5Yaml:
             for attr, attr_val in val.items():
                 if attr.startswith("_"):
                     continue
-                dset.attrs[attr] = attr_val
+                if attr in ("valid_min", "valid_max"):
+                    match val["_dtype"]:
+                        case "i1":
+                            dset.attrs[attr] = np.int8(attr_val)
+                        case "i2":
+                            dset.attrs[attr] = np.int16(attr_val)
+                        case "i4":
+                            dset.attrs[attr] = np.int32(attr_val)
+                        case "i8":
+                            dset.attrs[attr] = np.int64(attr_val)
+                        case "u1":
+                            dset.attrs[attr] = np.uint8(attr_val)
+                        case "u2":
+                            dset.attrs[attr] = np.uint16(attr_val)
+                        case "u4":
+                            dset.attrs[attr] = np.uint32(attr_val)
+                        case "u8":
+                            dset.attrs[attr] = np.uint64(attr_val)
+                        case "f2":
+                            dset.attrs[attr] = np.float16(attr_val)
+                        case "f4":
+                            dset.attrs[attr] = np.float32(attr_val)
+                        case "f8":
+                            dset.attrs[attr] = np.float64(attr_val)
+                        case _:
+                            dset.attrs[attr] = attr_val
+                elif attr == "flag_values":
+                    dset.attrs[attr] = np.array(attr_val, dtype="u1")
+                else:
+                    dset.attrs[attr] = attr_val
 
             if compounds is not None and val["_dtype"] in compounds:
                 if compounds[val["_dtype"]]["units"]:
