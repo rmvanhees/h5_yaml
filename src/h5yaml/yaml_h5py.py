@@ -93,7 +93,34 @@ class H5Yaml:
             for attr, attr_val in value.items():
                 if attr.startswith("_"):
                     continue
-                dset.attrs[attr] = attr_val
+                if attr in ("valid_min", "valid_max"):
+                    match val["_dtype"]:
+                        case "i1":
+                            dset.attrs[attr] = np.int8(attr_val)
+                        case "i2":
+                            dset.attrs[attr] = np.int16(attr_val)
+                        case "i4":
+                            dset.attrs[attr] = np.int32(attr_val)
+                        case "i8":
+                            dset.attrs[attr] = np.int64(attr_val)
+                        case "u1":
+                            dset.attrs[attr] = np.uint8(attr_val)
+                        case "u2":
+                            dset.attrs[attr] = np.uint16(attr_val)
+                        case "u4":
+                            dset.attrs[attr] = np.uint32(attr_val)
+                        case "u8":
+                            dset.attrs[attr] = np.uint64(attr_val)
+                        case "f2":
+                            dset.attrs[attr] = np.float16(attr_val)
+                        case "f4":
+                            dset.attrs[attr] = np.float32(attr_val)
+                        case "f8":
+                            dset.attrs[attr] = np.float64(attr_val)
+                        case _:
+                            dset.attrs[attr] = attr_val
+                else:
+                    dset.attrs[attr] = attr_val
 
     def __compounds(self: H5Yaml, fid: h5py.File) -> dict[str, str | int | float]:
         """Add compound datatypes to HDF5 product."""
