@@ -55,22 +55,22 @@ class H5Yaml:
 
     def __dimensions(self: H5Yaml, fid: h5py.File) -> None:
         """Add dimensions to HDF5 product."""
-        for key, value in self.h5_def["dimensions"].items():
+        for key, val in self.h5_def["dimensions"].items():
             fillvalue = None
-            if "_FillValue" in value:
+            if "_FillValue" in val:
                 fillvalue = (
-                    np.nan if value["_FillValue"] == "NaN" else int(value["_FillValue"])
+                    np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
                 )
 
-            if value["_size"] == 0:
-                ds_chunk = value.get("_chunks", (50,))
+            if val["_size"] == 0:
+                ds_chunk = val.get("_chunks", (50,))
                 dset = fid.create_dataset(
                     key,
                     shape=(0,),
                     dtype=(
                         h5py.string_dtype()
-                        if value["_dtype"] == "str"
-                        else value["_dtype"]
+                        if val["_dtype"] == "str"
+                        else val["_dtype"]
                     ),
                     chunks=ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk),
                     maxshape=(None,),
@@ -79,18 +79,18 @@ class H5Yaml:
             else:
                 dset = fid.create_dataset(
                     key,
-                    shape=(value["_size"],),
-                    dtype=value["_dtype"],
+                    shape=(val["_size"],),
+                    dtype=val["_dtype"],
                 )
-                if "_values" in value:
-                    dset[:] = value["_values"]
+                if "_values" in val:
+                    dset[:] = val["_values"]
 
             dset.make_scale(
                 Path(key).name
-                if "long_name" in value
+                if "long_name" in val
                 else "This is a netCDF dimension but not a netCDF variable."
             )
-            for attr, attr_val in value.items():
+            for attr, attr_val in val.items():
                 if attr.startswith("_"):
                     continue
                 if attr in ("valid_min", "valid_max"):
@@ -141,14 +141,14 @@ class H5Yaml:
                 for key, value in res.items():
                     self.h5_def["compounds"][key] = value
 
-        for key, value in self.h5_def["compounds"].items():
+        for key, val in self.h5_def["compounds"].items():
             compounds[key] = {
                 "dtype": [],
                 "units": [],
                 "names": [],
             }
 
-            for _key, _val in value.items():
+            for _key, _val in val.items():
                 compounds[key]["dtype"].append((_key, _val[0]))
                 if len(_val) == 3:
                     compounds[key]["units"].append(_val[1])
