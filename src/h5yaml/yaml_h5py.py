@@ -23,9 +23,9 @@ import numpy as np
 from h5yaml.conf_from_yaml import conf_from_yaml
 from h5yaml.lib.chunksizes import guess_chunks
 
-
 # - helper function ------------------------------------
-    
+
+
 # - class definition -----------------------------------
 class H5Yaml:
     """Class to create a HDF5/netCDF4 formated file from a YAML configuration file.
@@ -68,9 +68,7 @@ class H5Yaml:
                     key,
                     shape=(0,),
                     dtype=(
-                        h5py.string_dtype()
-                        if val["_dtype"] == "str"
-                        else val["_dtype"]
+                        h5py.string_dtype() if val["_dtype"] == "str" else val["_dtype"]
                     ),
                     chunks=ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk),
                     maxshape=(None,),
