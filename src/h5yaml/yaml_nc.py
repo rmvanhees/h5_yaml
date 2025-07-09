@@ -15,6 +15,7 @@ __all__ = ["NcYaml"]
 
 import logging
 from importlib.resources import files
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -47,12 +48,20 @@ class NcYaml:
     def __groups(self: NcYaml, fid: Dataset) -> None:
         """Create groups in HDF5 product."""
         for key in self.h5_def["groups"]:
-            _ = fid.createGroup(key)
+            pkey = PurePosixPath(key)
+            if pkey.is_absolute():
+                _ = fid[pkey.parent].createGroup(pkey.name)
+            else:
+                _ = fid.createGroup(key)
 
     def __dimensions(self: NcYaml, fid: Dataset) -> None:
         """Add dimensions to HDF5 product."""
         for key, value in self.h5_def["dimensions"].items():
-            _ = fid.createDimension(key, value["_size"])
+            pkey = PurePosixPath(key)
+            if pkey.is_absolute():
+                _ = fid[pkey.parent].createDimension(pkey.name, value["_size"])
+            else:
+                _ = fid.createDimension(key, value["_size"])
 
             if "long_name" not in value:
                 continue
@@ -63,13 +72,22 @@ class NcYaml:
                     np.nan if value["_FillValue"] == "NaN" else int(value["_FillValue"])
                 )
 
-            dset = fid.createVariable(
-                key,
-                value["_dtype"],
-                dimensions=(key,),
-                fill_value=fillvalue,
-                contiguous=value["_size"] != 0,
-            )
+            if pkey.is_absolute():
+                dset = fid[pkey.parent].createVariable(
+                    pkey.name,
+                    value["_dtype"],
+                    dimensions=(pkey.name,),
+                    fill_value=fillvalue,
+                    contiguous=value["_size"] != 0,
+                )
+            else:
+                dset = fid.createVariable(
+                    key,
+                    value["_dtype"],
+                    dimensions=(key,),
+                    fill_value=fillvalue,
+                    contiguous=value["_size"] != 0,
+                )
             dset.setncatts({k: v for k, v in value.items() if not k.startswith("_")})
 
     def __compounds(self: NcYaml, fid: Dataset) -> dict[str, str | int | float]:
@@ -145,11 +163,17 @@ class NcYaml:
                 compression = "zlib"
                 complevel = val["_compression"]
 
+            var_dims = []
             n_udim = 0
             ds_shape = ()
             ds_maxshape = ()
             for coord in val["_dims"]:
-                dim_sz = fid.dimensions[coord].size
+                pcoord = PurePosixPath(coord)
+                var_dims.append(pcoord.name if pcoord.is_absolute() else coord)
+                if pcoord.is_absolute():
+                    dim_sz = fid[pcoord.parent].dimensions[pcoord.name].size
+                else:
+                    dim_sz = fid.dimensions[coord].size
                 n_udim += int(dim_sz == 0)
                 ds_shape += (dim_sz,)
                 ds_maxshape += (dim_sz if dim_sz > 0 else None,)
@@ -163,12 +187,18 @@ class NcYaml:
                 val["_chunks"] if "_chunks" in val else guess_chunks(ds_shape, sz_dtype)
             )
 
+            pkey = PurePosixPath(key)
+            var_grp = fid[pkey.parent] if pkey.is_absolute() else fid
+            var_name = pkey.name if pkey.is_absolute() else key
+            if val["_dtype"] in fid.cmptypes:
+                val["_dtype"] = fid.cmptypes[val["_dtype"]]
+
             # create the variable
             if ds_chunk == "contiguous":
-                dset = fid.createVariable(
-                    key,
+                dset = var_grp.createVariable(
+                    var_name,
                     val["_dtype"],
-                    dimensions=(key,),
+                    dimensions=var_dims,
                     fill_value=fillvalue,
                     contiguous=True,
                 )
@@ -181,13 +211,10 @@ class NcYaml:
                     if ds_maxshape == (None,):
                         ds_chunk = (16,)
 
-                if key in fid.cmptypes:
-                    val["_dtype"] = fid.cmptypes[key]
-
-                dset = fid.createVariable(
-                    key,
+                dset = var_grp.createVariable(
+                    var_name,
                     val["_dtype"],
-                    dimensions=val["_dims"],
+                    dimensions=var_dims,
                     fill_value=fillvalue,
                     contiguous=False,
                     compression=compression,
