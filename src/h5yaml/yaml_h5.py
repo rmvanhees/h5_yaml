@@ -236,13 +236,14 @@ class H5Yaml:
                     shuffle = True
 
                 if val.get("_vlen"):
-                    ds_dtype = h5py.vlen_dtype(ds_dtype)
                     ds_name = (
                         val["_dtype"].split("_")[0]
                         if "_" in val["_dtype"]
                         else val["_dtype"]
-                    )
-                    fid[ds_name + "_vlen"] = ds_dtype
+                    ) + "_vlen"
+                    if ds_name not in fid:
+                        fid[ds_name] = h5py.vlen_dtype(ds_dtype)
+                    ds_dtype = fid[ds_name]
                     fillvalue = None
                     if ds_maxshape == (None,):
                         ds_chunk = (16,)
