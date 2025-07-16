@@ -258,7 +258,7 @@ class NcYaml:
 def tests() -> None:
     """..."""
     print("Calling NcYaml")
-    NcYaml(files("h5yaml.Data") / "h5_testing.yaml").create("test_yaml.nc")
+    NcYaml(files("h5yaml.Data") / "nc_testing.yaml").create("test_yaml.nc")
 
 
 if __name__ == "__main__":

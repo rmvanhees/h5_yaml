@@ -57,10 +57,6 @@ compounds:
     unc: [f4, '1', '\u03c3($S - S_{ref}$)']
     dark_offs: [f4, '1', dark-offset]
 
-  geo_dtype:
-    lat: [f4, latitude]
-    lon: [f4, longitude]
-    
 # Define variables
 variables:
   /group_00/detector_images:
@@ -96,8 +92,3 @@ variables:
     units: '1'
     valid_min: 0
     valid_max: 65534
-  /group_02/stats:
-    _dtype: stats_dtype
-    _vlen: True
-    _dims: [time]
-    comment: detector map statistics (vlen)
