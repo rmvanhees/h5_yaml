@@ -104,10 +104,11 @@ The YAML file should be structured as follows:
    Alternatively, provide a list with names of YAML files which contain the definitions
    of the compounds.
 
+   ```
    compounds:
      - h5_nomhk_tm.yaml
      - h5_science_hk.yaml
-
+   ```
  * The 'variables' are defined by their data-type ('_dtype') and dimensions ('_dims'),
    and optionally chunk sizes ('_chunks'), compression ('_compression'), variable length
    ('_vlen'). In addition, each variable can have as many attributes as you like,
