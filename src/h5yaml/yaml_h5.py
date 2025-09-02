@@ -82,6 +82,8 @@ class H5Yaml:
                 )
                 if "_values" in val:
                     dset[:] = val["_values"]
+                elif "_range" in val:
+                    dset[:] = np.arange(*val["_range"], dtype=val["_dtype"])
 
             dset.make_scale(
                 Path(key).name
