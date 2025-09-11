@@ -320,7 +320,8 @@ class H5Yaml:
         """
         try:
             with h5py.File(l1a_name, "w") as fid:
-                self.__groups(fid)
+                if "groups" in self.h5_def:
+                    self.__groups(fid)
                 self.__dimensions(fid)
                 self.__variables(fid, self.__compounds(fid))
         except PermissionError as exc:
