@@ -23,7 +23,43 @@ import numpy as np
 from h5yaml.conf_from_yaml import conf_from_yaml
 from h5yaml.lib.chunksizes import guess_chunks
 
+
 # - helper function ------------------------------------
+def adjust_attr(attr_key: str, attr_val: np.ndarray, attr_dtype: str) -> np.ndarray:
+    """..."""
+    if attr_key in ("valid_min", "valid_max", "valid_range"):
+        match attr_dtype:
+            case "i1":
+                res = np.int8(attr_val)
+            case "i2":
+                res = np.int16(attr_val)
+            case "i4":
+                res = np.int32(attr_val)
+            case "i8":
+                res = np.int64(attr_val)
+            case "u1":
+                res = np.uint8(attr_val)
+            case "u2":
+                res = np.uint16(attr_val)
+            case "u4":
+                res = np.uint32(attr_val)
+            case "u8":
+                res = np.uint64(attr_val)
+            case "f2":
+                res = np.float16(attr_val)
+            case "f4":
+                res = np.float32(attr_val)
+            case "f8":
+                res = np.float64(attr_val)
+            case _:
+                res = attr_val
+
+        return res
+
+    if attr_key == "flag_values":
+        return np.array(attr_val, dtype="u1")
+
+    return attr_val
 
 
 # - class definition -----------------------------------
@@ -91,36 +127,8 @@ class H5Yaml:
                 else "This is a netCDF dimension but not a netCDF variable."
             )
             for attr, attr_val in val.items():
-                if attr.startswith("_"):
-                    continue
-                if attr in ("valid_min", "valid_max"):
-                    match val["_dtype"]:
-                        case "i1":
-                            dset.attrs[attr] = np.int8(attr_val)
-                        case "i2":
-                            dset.attrs[attr] = np.int16(attr_val)
-                        case "i4":
-                            dset.attrs[attr] = np.int32(attr_val)
-                        case "i8":
-                            dset.attrs[attr] = np.int64(attr_val)
-                        case "u1":
-                            dset.attrs[attr] = np.uint8(attr_val)
-                        case "u2":
-                            dset.attrs[attr] = np.uint16(attr_val)
-                        case "u4":
-                            dset.attrs[attr] = np.uint32(attr_val)
-                        case "u8":
-                            dset.attrs[attr] = np.uint64(attr_val)
-                        case "f2":
-                            dset.attrs[attr] = np.float16(attr_val)
-                        case "f4":
-                            dset.attrs[attr] = np.float32(attr_val)
-                        case "f8":
-                            dset.attrs[attr] = np.float64(attr_val)
-                        case _:
-                            dset.attrs[attr] = attr_val
-                else:
-                    dset.attrs[attr] = attr_val
+                if not attr.startswith("_"):
+                    dset.attrs[attr] = adjust_attr(attr, attr_val, val["_dtype"])
 
     def __compounds(self: H5Yaml, fid: h5py.File) -> dict[str, str | int | float]:
         """Add compound datatypes to HDF5 product."""
@@ -194,9 +202,8 @@ class H5Yaml:
                     fillvalue=fillvalue,
                 )
                 for attr, attr_val in val.items():
-                    if attr.startswith("_"):
-                        continue
-                    dset.attrs[attr] = attr_val
+                    if not attr.startswith("_"):
+                        dset.attrs[attr] = adjust_attr(attr, attr_val, val["_dtype"])
                 continue
 
             n_udim = 0
@@ -265,38 +272,8 @@ class H5Yaml:
                 dset.dims[ii].attach_scale(fid[coord])
 
             for attr, attr_val in val.items():
-                if attr.startswith("_"):
-                    continue
-                if attr in ("valid_min", "valid_max"):
-                    match val["_dtype"]:
-                        case "i1":
-                            dset.attrs[attr] = np.int8(attr_val)
-                        case "i2":
-                            dset.attrs[attr] = np.int16(attr_val)
-                        case "i4":
-                            dset.attrs[attr] = np.int32(attr_val)
-                        case "i8":
-                            dset.attrs[attr] = np.int64(attr_val)
-                        case "u1":
-                            dset.attrs[attr] = np.uint8(attr_val)
-                        case "u2":
-                            dset.attrs[attr] = np.uint16(attr_val)
-                        case "u4":
-                            dset.attrs[attr] = np.uint32(attr_val)
-                        case "u8":
-                            dset.attrs[attr] = np.uint64(attr_val)
-                        case "f2":
-                            dset.attrs[attr] = np.float16(attr_val)
-                        case "f4":
-                            dset.attrs[attr] = np.float32(attr_val)
-                        case "f8":
-                            dset.attrs[attr] = np.float64(attr_val)
-                        case _:
-                            dset.attrs[attr] = attr_val
-                elif attr == "flag_values":
-                    dset.attrs[attr] = np.array(attr_val, dtype="u1")
-                else:
-                    dset.attrs[attr] = attr_val
+                if not attr.startswith("_"):
+                    dset.attrs[attr] = adjust_attr(attr, attr_val, val["_dtype"])
 
             if compounds is not None and val["_dtype"] in compounds:
                 if compounds[val["_dtype"]]["units"]:
