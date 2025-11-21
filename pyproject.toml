@@ -73,7 +73,7 @@ distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.d{build_date:%Y%m%d}"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-addopts = "--import-mode=importlib --cov=pyxarr --cov-report=xml --cov-report=term"
+addopts = "--import-mode=importlib --cov=h5yaml --cov-report=xml --cov-report=term"
 strict = true
 
 [tool.coverage.run]
