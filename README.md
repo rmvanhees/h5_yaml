@@ -154,5 +154,5 @@ The code is developed by R.M. van Hees (SRON)
 
 ## License
 
-* Copyright: SRON (https://www.sron.nl).
-* License: BSD-3-clause
+* Copyright: Richard van Hees (SRON) (https://www.sron.nl).
+* License: Apache-2.0
