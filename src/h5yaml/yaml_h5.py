@@ -297,6 +297,15 @@ class H5Yaml:
         """Return definition of the HDF5/netCDF4 product."""
         return self._h5_def
 
+    def diskless(self: H5Yaml) -> h5py.File:
+        """Create a HDF5/netCDF4 file in memory."""
+        fid = h5py.File.in_memory()
+        if "groups" in self.h5_def:
+            self.__groups(fid)
+        self.__dimensions(fid)
+        self.__variables(fid, self.__compounds(fid))
+        return fid
+
     def create(self: H5Yaml, l1a_name: Path | str) -> None:
         """Create a HDF5/netCDF4 file (overwrite if exist).
 
