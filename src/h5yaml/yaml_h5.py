@@ -25,7 +25,6 @@ from __future__ import annotations
 __all__ = ["H5Yaml"]
 
 import logging
-from importlib.resources import files
 from pathlib import Path
 
 import h5py
@@ -36,10 +35,24 @@ from h5yaml.lib.chunksizes import guess_chunks
 
 
 # - helper function ------------------------------------
-def adjust_attr(attr_key: str, attr_val: np.ndarray, attr_dtype: str) -> np.ndarray:
-    """..."""
+def adjust_attr(dtype: str, attr_key: str, attr_val: np.generic) -> np.generic:
+    """Return attribute converted to the same data type as its variable.
+
+    Parameters
+    ----------
+    dtype :  str
+      numpy data-type of variable
+    attr_key :  str
+      name of the attribute
+    attr_val :  np.generic
+      original value of the attribute
+
+    Returns
+    -------
+    attr_val converted to dtype
+    """
     if attr_key in ("valid_min", "valid_max", "valid_range"):
-        match attr_dtype:
+        match dtype:
             case "i1":
                 res = np.int8(attr_val)
             case "i2":
@@ -139,7 +152,7 @@ class H5Yaml:
             )
             for attr, attr_val in val.items():
                 if not attr.startswith("_"):
-                    dset.attrs[attr] = adjust_attr(attr, attr_val, val["_dtype"])
+                    dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
 
     def __compounds(self: H5Yaml, fid: h5py.File) -> dict[str, str | int | float]:
         """Add compound datatypes to HDF5 product."""
@@ -214,7 +227,7 @@ class H5Yaml:
                 )
                 for attr, attr_val in val.items():
                     if not attr.startswith("_"):
-                        dset.attrs[attr] = adjust_attr(attr, attr_val, val["_dtype"])
+                        dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
                 continue
 
             n_udim = 0
@@ -284,7 +297,7 @@ class H5Yaml:
 
             for attr, attr_val in val.items():
                 if not attr.startswith("_"):
-                    dset.attrs[attr] = adjust_attr(attr, attr_val, val["_dtype"])
+                    dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
 
             if compounds is not None and val["_dtype"] in compounds:
                 if compounds[val["_dtype"]]["units"]:
@@ -323,14 +336,3 @@ class H5Yaml:
                 self.__variables(fid, self.__compounds(fid))
         except PermissionError as exc:
             raise RuntimeError(f"failed create {l1a_name}") from exc
-
-
-# - test module -------------------------
-def tests() -> None:
-    """..."""
-    print("Calling H5Yaml")
-    H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create("test_yaml.h5")
-
-
-if __name__ == "__main__":
-    tests()

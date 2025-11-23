@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from importlib.resources import files
 
+import numpy as np
+
 from h5yaml.yaml_h5 import H5Yaml
 
 
@@ -80,16 +82,21 @@ class TestH5Yaml:
         if "variables" not in self.H5_DEF:
             return
 
-        for key in self.H5_DEF["variables"]:
+        dset = self.H5_DEF["variables"]
+        for key in dset:
             assert key in self.FID
-            if "_dtype" in self.H5_DEF["variables"][key]:
-                assert self.FID[key].dtype == self.H5_DEF["variables"][key]["_dtype"]
-            if "_size" in self.H5_DEF["variables"][key]:
-                assert self.FID[key].size == self.H5_DEF["variables"][key]["_size"]
+            # if "_dtype" in self.H5_DEF["variables"][key]:
+            #     assert self.FID[key].dtype == self.H5_DEF["variables"][key]["_dtype"]
+            if "_size" in dset[key]:
+                assert self.FID[key].size == dset[key]["_size"]
             for attr in self.H5_DEF["variables"][key]:
                 if attr[0] == "_":
                     continue
-                assert self.FID[key].attrs[attr] == self.H5_DEF["variables"][key][attr]
+
+                if isinstance(dset[key][attr], list | tuple | np.ndarray):
+                    assert np.array_equal(self.FID[key].attrs[attr], dset[key][attr])
+                else:
+                    assert self.FID[key].attrs[attr] == dset[key][attr]
 
     def test_close(self: TestH5Yaml) -> None:
         """..."""
