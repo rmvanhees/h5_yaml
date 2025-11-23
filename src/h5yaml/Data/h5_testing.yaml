@@ -196,13 +196,6 @@ variables:
     valid_min: -999999.9
     valid_max: 999999.9
   /group_03/ds_12:
-    _dtype: f8
-    _dims: [number_of_images]
-    long_name: double dataset
-    units: '1'
-    valid_min: -999999.9
-    valid_max: 999999.9
-  /group_03/ds_13:
     _dtype: complex64
     _dims: [number_of_images]
     long_name: complex64 dataset
