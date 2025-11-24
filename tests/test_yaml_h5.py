@@ -85,6 +85,16 @@ class TestH5Yaml:
                 assert self.FID[key].dtype == np.dtype("O") if dtype == "str" else dtype
             if "_size" in self.H5_DEF["dimensions"][key]:
                 assert self.FID[key].size == self.H5_DEF["dimensions"][key]["_size"]
+            if "_values" in self.H5_DEF["dimensions"][key]:
+                assert np.array_equal(
+                    [x.decode() for x in self.FID[key][:]],
+                    self.H5_DEF["dimensions"][key]["_values"],
+                )
+            if "_range" in self.H5_DEF["dimensions"][key]:
+                assert np.array_equal(
+                    self.FID[key][:],
+                    np.arange(*self.H5_DEF["dimensions"][key]["_range"]),
+                )
             for attr in self.H5_DEF["dimensions"][key]:
                 if attr[0] == "_":
                     continue

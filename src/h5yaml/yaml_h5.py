@@ -30,60 +30,9 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from h5yaml.conf_from_yaml import conf_from_yaml
-from h5yaml.lib.chunksizes import guess_chunks
-
-
-# - helper function ------------------------------------
-def adjust_attr(dtype: str, attr_key: str, attr_val: np.generic) -> np.generic:
-    """Return attribute converted to the same data type as its variable.
-
-    Parameters
-    ----------
-    dtype :  str
-      numpy data-type of variable
-    attr_key :  str
-      name of the attribute
-    attr_val :  np.generic
-      original value of the attribute
-
-    Returns
-    -------
-    attr_val converted to dtype
-    """
-    if attr_key in ("valid_min", "valid_max", "valid_range"):
-        match dtype:
-            case "i1":
-                res = np.int8(attr_val)
-            case "i2":
-                res = np.int16(attr_val)
-            case "i4":
-                res = np.int32(attr_val)
-            case "i8":
-                res = np.int64(attr_val)
-            case "u1":
-                res = np.uint8(attr_val)
-            case "u2":
-                res = np.uint16(attr_val)
-            case "u4":
-                res = np.uint32(attr_val)
-            case "u8":
-                res = np.uint64(attr_val)
-            case "f2":
-                res = np.float16(attr_val)
-            case "f4":
-                res = np.float32(attr_val)
-            case "f8":
-                res = np.float64(attr_val)
-            case _:
-                res = attr_val
-
-        return res
-
-    if attr_key == "flag_values":
-        return np.array(attr_val, dtype="u1")
-
-    return attr_val
+from .conf_from_yaml import conf_from_yaml
+from .lib.adjust_attr import adjust_attr
+from .lib.chunksizes import guess_chunks
 
 
 # - class definition -----------------------------------

@@ -98,6 +98,16 @@ variables:
     units: '1'
     valid_min: 0
     valid_max: 65534
+  /group_01/contiguous_image:
+    _dtype: u2
+    _dims: [row, column]
+    _chunks: "contiguous"
+    _FillValue: 65535
+    long_name: Detector pixel values
+    comment:  contiguous dataset
+    units: '1'
+    valid_min: 0
+    valid_max: 65534
   /group_01/stats:
     _dtype: stats_dtype
     _dims: [time]

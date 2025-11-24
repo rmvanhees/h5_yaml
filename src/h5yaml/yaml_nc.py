@@ -33,8 +33,9 @@ import numpy as np
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
-from h5yaml.conf_from_yaml import conf_from_yaml
-from h5yaml.lib.chunksizes import guess_chunks
+from .conf_from_yaml import conf_from_yaml
+from .lib.adjust_attr import adjust_attr
+from .lib.chunksizes import guess_chunks
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -73,7 +74,7 @@ class NcYaml:
             else:
                 _ = fid.createDimension(key, value["_size"])
 
-            if "long_name" not in value:
+            if len(value) <= 2:
                 continue
 
             fillvalue = None
@@ -98,7 +99,19 @@ class NcYaml:
                     fill_value=fillvalue,
                     contiguous=value["_size"] != 0,
                 )
-            dset.setncatts({k: v for k, v in value.items() if not k.startswith("_")})
+            if value["_size"] > 0:
+                if "_values" in value:
+                    dset[:] = np.array(value["_values"])
+                elif "_range" in value:
+                    dset[:] = np.arange(*value["_range"], dtype=value["_dtype"])
+
+            dset.setncatts(
+                {
+                    k: adjust_attr(value["_dtype"], k, v)
+                    for k, v in value.items()
+                    if not k.startswith("_")
+                }
+            )
 
     def __compounds(self: NcYaml, fid: Dataset) -> dict[str, str | int | float]:
         """Add compound datatypes to HDF5 product."""
@@ -178,7 +191,13 @@ class NcYaml:
                     fill_value=fillvalue,
                     contiguous=True,
                 )
-                dset.setncatts({k: v for k, v in val.items() if not k.startswith("_")})
+                dset.setncatts(
+                    {
+                        k: adjust_attr(val["_dtype"], k, v)
+                        for k, v in val.items()
+                        if not k.startswith("_")
+                    }
+                )
                 continue
 
             compression = None
@@ -245,7 +264,13 @@ class NcYaml:
                         ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk)
                     ),
                 )
-            dset.setncatts({k: v for k, v in val.items() if not k.startswith("_")})
+            dset.setncatts(
+                {
+                    k: adjust_attr(val["_dtype"], k, v)
+                    for k, v in val.items()
+                    if not k.startswith("_")
+                }
+            )
 
             if compounds is not None and val["_dtype"] in compounds:
                 if compounds[val["_dtype"]]["units"]:

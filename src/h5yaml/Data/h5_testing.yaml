@@ -81,7 +81,7 @@ compounds:
     
 # Define variables
 variables:
-  # ---------- GROUP 01 ----------
+  # ---------- GROUP 00 ----------
   /group_00/detector_images:
     _dtype: u2
     _dims: [number_of_images, column, row]
@@ -91,6 +91,7 @@ variables:
     units: '1'
     valid_min: 0
     valid_max: 65534
+  # ---------- GROUP 01 ----------
   /group_01/detector_images:
     _dtype: u2
     _dims: [number_of_images, samples_per_image]
@@ -101,7 +102,7 @@ variables:
     units: '1'
     valid_min: 0
     valid_max: 65534
-  /group_02/contiguous_image:
+  /group_01/contiguous_image:
     _dtype: u2
     _dims: [row, column]
     _chunks: "contiguous"

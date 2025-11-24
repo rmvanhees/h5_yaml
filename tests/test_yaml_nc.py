@@ -83,9 +83,18 @@ class TestNcYaml:
             if dim_name in dim_grp.variables:
                 nc_dim = dim_grp.variables[dim_name]
                 if "_dtype" in self.NC_DEF["dimensions"][key]:
-                    assert nc_dim.dtype == self.NC_DEF["dimensions"][key]["_dtype"]
+                    dtype = self.NC_DEF["dimensions"][key]["_dtype"]
+                    assert nc_dim.dtype == str if dtype == "str" else dtype
                 if "_size" in self.NC_DEF["dimensions"][key]:
                     assert nc_dim.size == self.NC_DEF["dimensions"][key]["_size"]
+                if "_values" in self.NC_DEF["dimensions"][key]:
+                    assert np.array_equal(
+                        nc_dim[:], self.NC_DEF["dimensions"][key]["_values"]
+                    )
+                if "_range" in self.NC_DEF["dimensions"][key]:
+                    assert np.array_equal(
+                        nc_dim[:], np.arange(*self.NC_DEF["dimensions"][key]["_range"])
+                    )
                 for attr in self.NC_DEF["dimensions"][key]:
                     if attr[0] == "_":
                         continue
