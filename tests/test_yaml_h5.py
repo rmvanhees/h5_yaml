@@ -23,27 +23,47 @@
 from __future__ import annotations
 
 from importlib.resources import files
+from pathlib import Path
 
 import numpy as np
+import pytest
 
 from h5yaml.yaml_h5 import H5Yaml
 
 
-#
-# 1) read YAML file <- yml_name -> dict
-# 2) create HDF5 file <- h5_name -> fid
-# 3) create groups <- fid, dict['groups']
-# 4) create dimensions <- fid, dict['dimensions']
-# 5) create compounds <- fid, dict['compounds']
-# 6) create variables <- fid, dict['variables']
-# 7) create attributes <- fid, dict['attributes']
-# 8) close HDF5 file <- fid
-#
 class TestH5Yaml:
     """Class to test H5Yaml from h5yaml.yaml_h5."""
 
     H5_DEF = H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").h5_def
     FID = H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").diskless()
+
+    def test_exceptions(self: TestH5Yaml) -> None:
+        """..."""
+        # tests which should raise an exception because the file can not be created
+        l1a_name = "/this/folder/does/not/exists/test.h5"
+        with pytest.raises(FileNotFoundError, match=r"[Errno 2] .*") as excinfo:
+            _ = H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create(l1a_name)
+        assert "'No such file or directory" in str(excinfo)
+
+        l1a_name = Path("/this/folder/does/not/exists/test.h5")
+        with pytest.raises(FileNotFoundError, match=r"[Errno 2] .*") as excinfo:
+            _ = H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create(l1a_name)
+        assert "'No such file or directory" in str(excinfo)
+
+        l1a_name = "/test.h5"
+        with pytest.raises(RuntimeError, match=r"failed create .*") as excinfo:
+            _ = H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create(l1a_name)
+        assert f"failed create {l1a_name}" in str(excinfo.value)
+
+        # tests which raise an exception because the YAML file is corrupted
+        file_path = Path("h5_testing.yaml")
+        with pytest.raises(FileNotFoundError, match=r".* not found") as excinfo:
+            _ = H5Yaml(file_path).h5_def
+        assert f"{file_path} not found" in str(excinfo.value)
+
+        with pytest.raises(ValueError, match=r".* unlimited dimension") as excinfo:
+            _ = H5Yaml(files("h5yaml.Data") / "h5_unsupported.yaml").create("klad.h5")
+        assert "has more than one unlimited dimension" in str(excinfo.value)
 
     def test_groups(self: TestH5Yaml) -> None:
         """..."""
@@ -61,7 +81,8 @@ class TestH5Yaml:
         for key in self.H5_DEF["dimensions"]:
             assert key in self.FID
             if "_dtype" in self.H5_DEF["dimensions"][key]:
-                assert self.FID[key].dtype == self.H5_DEF["dimensions"][key]["_dtype"]
+                dtype = self.H5_DEF["dimensions"][key]["_dtype"]
+                assert self.FID[key].dtype == np.dtype("O") if dtype == "str" else dtype
             if "_size" in self.H5_DEF["dimensions"][key]:
                 assert self.FID[key].size == self.H5_DEF["dimensions"][key]["_size"]
             for attr in self.H5_DEF["dimensions"][key]:

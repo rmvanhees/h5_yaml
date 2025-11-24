@@ -38,9 +38,14 @@ dimensions:
   column:
     _dtype: u2
     _size: 640
+    _range: [0, 640, 1]
   row:
     _dtype: u2
     _size: 512
+  viewport:
+    _dtype: str
+    _size: 5
+    _values: ['-50', '-20', '+0', '+20', '+50']
   time:
     _dtype: f8
     _size: 0
@@ -93,6 +98,16 @@ variables:
     _compression: 1
     long_name: Detector pixel values
     comment: variable binned data (filled to the largest samples_per_image)
+    units: '1'
+    valid_min: 0
+    valid_max: 65534
+  /group_02/contiguous_image:
+    _dtype: u2
+    _dims: [row, column]
+    _chunks: "contiguous"
+    _FillValue: 65535
+    long_name: Detector pixel values
+    comment:  contiguous dataset
     units: '1'
     valid_min: 0
     valid_max: 65534
@@ -199,6 +214,17 @@ variables:
     _dtype: complex64
     _dims: [number_of_images]
     long_name: complex64 dataset
-    units: '1'
-    valid_min: 0
-    valid_max: 9999.9
+    valid_min: 0j
+    valid_max: 999999.9j
+  /group_03/ds_13:
+    _dtype: str
+    _dims: [number_of_images]
+    long_name: string dataset
+  /group_03/ds_14:
+    _dtype: str
+    _dims: [scalar]
+    long_name: scalar(str)
+  /group_03/ds_15:
+    _dtype: int
+    _dims: [scalar]
+    long_name: scalar(int)

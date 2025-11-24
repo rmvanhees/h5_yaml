@@ -24,21 +24,18 @@ from __future__ import annotations
 
 __all__ = ["conf_from_yaml"]
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import yaml
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 # - main function -----------------------------------
-def conf_from_yaml(file_path: Path) -> dict:
+def conf_from_yaml(file_path: Path | str) -> dict:
     """Read settings from a YAML file: `file_path`.
 
     Parameters
     ----------
-    file_path :  Path
+    file_path :  Path | str
        full path of YAML file
 
     Returns
@@ -47,6 +44,9 @@ def conf_from_yaml(file_path: Path) -> dict:
        content of the configuration file
 
     """
+    if isinstance(file_path, str):
+        file_path = Path(str)
+
     if not file_path.is_file():
         raise FileNotFoundError(f"{file_path} not found")
 

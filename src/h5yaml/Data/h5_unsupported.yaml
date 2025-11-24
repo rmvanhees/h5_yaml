@@ -1,0 +1,56 @@
+# YAML
+#
+# This file is part of Python package: `h5yaml`
+#
+#     https://github.com/rmvanhees/pyxarr.git
+#
+# Copyright (c) 2025 - R.M. van Hees (SRON)
+#    All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Define dimensions
+# Note dimensions with an attribute 'long_name' will also be generated as variable
+# Define groups
+groups:
+  - group_00
+
+dimensions:
+  number_of_images:
+    _dtype: u2
+    _size: 0
+  time:
+    _dtype: f8
+    _size: 0
+    _FillValue: -32767
+    long_name: Attitude sample time (seconds of day)
+    calendar: proleptic_gregorian
+    units: seconds since %Y-%m-%d %H:%M:%S
+    valid_min: 0
+    valid_max: 92400
+    
+# Define compound types
+# - compound elements must have a data-type, and can have a unit and long_name 
+compounds:
+  - h5_compound.yaml
+  - h5_nocompound.yaml
+
+# Define variables
+variables:
+  ds_01:
+    _dtype: f8
+    _dims: [time, number_of_images]
+    long_name: double dataset
+    units: '1'
+    valid_min: -999999.9
+    valid_max: 999999.9

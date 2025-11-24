@@ -34,9 +34,9 @@ dynamic = [
    "version",
 ]
 dependencies = [
-   "h5py>=3.11",
+   "h5py>=3.14",
    "netCDF4>=1.7",
-   "numpy>=1.26.4",
+   "numpy>=2.0",
    "pyYAML>=6.0",
 ]
 

@@ -127,9 +127,7 @@ class H5Yaml:
                 dset = fid.create_dataset(
                     key,
                     shape=(0,),
-                    dtype=(
-                        h5py.string_dtype() if val["_dtype"] == "str" else val["_dtype"]
-                    ),
+                    dtype="T" if val["_dtype"] == "str" else val["_dtype"],
                     chunks=ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk),
                     maxshape=(None,),
                     fillvalue=fillvalue,
@@ -138,7 +136,7 @@ class H5Yaml:
                 dset = fid.create_dataset(
                     key,
                     shape=(val["_size"],),
-                    dtype=val["_dtype"],
+                    dtype="T" if val["_dtype"] == "str" else val["_dtype"],
                 )
                 if "_values" in val:
                     dset[:] = val["_values"]
@@ -208,7 +206,7 @@ class H5Yaml:
                 ds_dtype = fid[val["_dtype"]]
                 dtype_size = fid[val["_dtype"]].dtype.itemsize
             else:
-                ds_dtype = val["_dtype"]
+                ds_dtype = "T" if val["_dtype"] == "str" else val["_dtype"]
                 dtype_size = np.dtype(val["_dtype"]).itemsize
 
             fillvalue = None
@@ -241,7 +239,7 @@ class H5Yaml:
 
             # currently, we can not handle more than one unlimited dimension
             if n_udim > 1:
-                raise ValueError("more than one unlimited dimension")
+                raise ValueError(f"{key} has more than one unlimited dimension")
 
             # obtain chunk-size settings
             ds_chunk = (
