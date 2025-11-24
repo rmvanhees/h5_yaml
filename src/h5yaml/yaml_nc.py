@@ -25,7 +25,6 @@ from __future__ import annotations
 __all__ = ["NcYaml"]
 
 import logging
-from importlib.resources import files
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
@@ -45,20 +44,20 @@ if TYPE_CHECKING:
 class NcYaml:
     """Class to create a HDF5/netCDF4 formated file from a YAML configuration file."""
 
-    def __init__(self: NcYaml, h5_yaml_fl: Path) -> None:
+    def __init__(self: NcYaml, nc_yaml_fl: Path) -> None:
         """Construct a NcYaml instance."""
         self.logger = logging.getLogger("h5yaml.NcYaml")
 
         try:
-            self._h5_def = conf_from_yaml(h5_yaml_fl)
+            self._nc_def = conf_from_yaml(nc_yaml_fl)
         except RuntimeError as exc:
             raise RuntimeError from exc
 
-        self.yaml_dir = h5_yaml_fl.parent
+        self.yaml_dir = nc_yaml_fl.parent
 
     def __groups(self: NcYaml, fid: Dataset) -> None:
         """Create groups in HDF5 product."""
-        for key in self.h5_def["groups"]:
+        for key in self.nc_def["groups"]:
             pkey = PurePosixPath(key)
             if pkey.is_absolute():
                 _ = fid[pkey.parent].createGroup(pkey.name)
@@ -67,7 +66,7 @@ class NcYaml:
 
     def __dimensions(self: NcYaml, fid: Dataset) -> None:
         """Add dimensions to HDF5 product."""
-        for key, value in self.h5_def["dimensions"].items():
+        for key, value in self.nc_def["dimensions"].items():
             pkey = PurePosixPath(key)
             if pkey.is_absolute():
                 _ = fid[pkey.parent].createDimension(pkey.name, value["_size"])
@@ -103,13 +102,13 @@ class NcYaml:
 
     def __compounds(self: NcYaml, fid: Dataset) -> dict[str, str | int | float]:
         """Add compound datatypes to HDF5 product."""
-        if "compounds" not in self.h5_def:
+        if "compounds" not in self.nc_def:
             return {}
 
         compounds = {}
-        if isinstance(self.h5_def["compounds"], list):
-            file_list = self.h5_def["compounds"].copy()
-            self.h5_def["compounds"] = {}
+        if isinstance(self.nc_def["compounds"], list):
+            file_list = self.nc_def["compounds"].copy()
+            self.nc_def["compounds"] = {}
             for name in file_list:
                 if not (yaml_fl := self.yaml_dir / name).is_file():
                     continue
@@ -118,9 +117,9 @@ class NcYaml:
                 except RuntimeError as exc:
                     raise RuntimeError from exc
                 for key, value in res.items():
-                    self.h5_def["compounds"][key] = value
+                    self.nc_def["compounds"][key] = value
 
-        for key, value in self.h5_def["compounds"].items():
+        for key, value in self.nc_def["compounds"].items():
             compounds[key] = {
                 "dtype": [],
                 "units": [],
@@ -153,7 +152,11 @@ class NcYaml:
            Definition of the compound(s) in the product
 
         """
-        for key, val in self.h5_def["variables"].items():
+        for key, val in self.nc_def["variables"].items():
+            pkey = PurePosixPath(key)
+            var_grp = fid[pkey.parent] if pkey.is_absolute() else fid
+            var_name = pkey.name if pkey.is_absolute() else key
+
             if val["_dtype"] in fid.cmptypes:
                 ds_dtype = fid.cmptypes[val["_dtype"]].dtype
                 sz_dtype = ds_dtype.itemsize
@@ -166,6 +169,17 @@ class NcYaml:
                 fillvalue = (
                     np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
                 )
+
+            # check for scalar dataset
+            if val["_dims"][0] == "scalar":
+                dset = var_grp.createVariable(
+                    var_name,
+                    val["_dtype"],
+                    fill_value=fillvalue,
+                    contiguous=True,
+                )
+                dset.setncatts({k: v for k, v in val.items() if not k.startswith("_")})
+                continue
 
             compression = None
             complevel = 0
@@ -198,9 +212,6 @@ class NcYaml:
                 val["_chunks"] if "_chunks" in val else guess_chunks(ds_shape, sz_dtype)
             )
 
-            pkey = PurePosixPath(key)
-            var_grp = fid[pkey.parent] if pkey.is_absolute() else fid
-            var_name = pkey.name if pkey.is_absolute() else key
             if val["_dtype"] in fid.cmptypes:
                 val["_dtype"] = fid.cmptypes[val["_dtype"]]
 
@@ -224,7 +235,7 @@ class NcYaml:
 
                 dset = var_grp.createVariable(
                     var_name,
-                    val["_dtype"],
+                    str if val["_dtype"] == "str" else val["_dtype"],
                     dimensions=var_dims,
                     fill_value=fillvalue,
                     contiguous=False,
@@ -243,9 +254,17 @@ class NcYaml:
                     dset.attrs["long_name"] = compounds[val["_dtype"]]["names"]
 
     @property
-    def h5_def(self: NcYaml) -> dict:
+    def nc_def(self: NcYaml) -> dict:
         """Return definition of the HDF5/netCDF4 product."""
-        return self._h5_def
+        return self._nc_def
+
+    def diskless(self: NcYaml) -> Dataset:
+        """Create a HDF5/netCDF4 file in memory."""
+        fid = Dataset("diskless_test.nc", "w", diskless=True, persistent=False)
+        self.__groups(fid)
+        self.__dimensions(fid)
+        self.__variables(fid, self.__compounds(fid))
+        return fid
 
     def create(self: NcYaml, l1a_name: Path | str) -> None:
         """Create a HDF5/netCDF4 file (overwrite if exist).
@@ -262,15 +281,4 @@ class NcYaml:
                 self.__dimensions(fid)
                 self.__variables(fid, self.__compounds(fid))
         except PermissionError as exc:
-            raise RuntimeError(f"failed create {l1a_name}") from exc
-
-
-# - test module -------------------------
-def tests() -> None:
-    """..."""
-    print("Calling NcYaml")
-    NcYaml(files("h5yaml.Data") / "nc_testing.yaml").create("test_yaml.nc")
-
-
-if __name__ == "__main__":
-    tests()
+            raise RuntimeError(f"failed to create {l1a_name}") from exc

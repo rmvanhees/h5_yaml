@@ -24,6 +24,7 @@ groups:
   - group_00
   - group_01
   - group_02
+  - group_03
 
 # Define dimensions
 # Note dimensions with an attribute 'long_name' will also be generated as variable
@@ -37,9 +38,14 @@ dimensions:
   column:
     _dtype: u2
     _size: 640
+    _range: [0, 640, 1]
   row:
     _dtype: u2
     _size: 512
+  /group_03/viewport:
+    _dtype: str
+    _size: 5
+    _values: ['-50', '-20', '+0', '+20', '+50']
   time:
     _dtype: f8
     _size: 0
@@ -71,6 +77,7 @@ compounds:
 
 # Define variables
 variables:
+  # ---------- GROUP 00 ----------
   /group_00/detector_images:
     _dtype: u2
     _dims: [number_of_images, column, row]
@@ -80,6 +87,7 @@ variables:
     units: '1'
     valid_min: 0
     valid_max: 65534
+  # ---------- GROUP 01 ----------
   /group_01/detector_images:
     _dtype: u2
     _dims: [number_of_images, samples_per_image]
@@ -94,6 +102,7 @@ variables:
     _dtype: stats_dtype
     _dims: [time]
     comment: detector map statistics
+  # ---------- GROUP 02 ----------
   /group_02/detector_images:
     _dtype: u2
     _dims: [number_of_images]
@@ -104,3 +113,100 @@ variables:
     units: '1'
     valid_min: 0
     valid_max: 65534
+  # ---------- GROUP 03 ----------
+  /group_03/ds_01:
+    _dtype: u1
+    _dims: [number_of_images]
+    long_name: unsigned byte dataset
+    units: '1'
+    valid_min: 0
+    valid_max: 255
+    flag_values: [1, 2, 4, 8, 16]
+  /group_03/ds_02:
+    _dtype: i1
+    _dims: [number_of_images]
+    long_name: signed byte dataset
+    units: '1'
+    valid_min: -128
+    valid_max: 127
+  /group_03/ds_03:
+    _dtype: u2
+    _dims: [number_of_images]
+    long_name: unsigned short dataset
+    units: '1'
+    valid_min: 0
+    valid_max: 1024
+  /group_03/ds_04:
+    _dtype: i2
+    _dims: [number_of_images]
+    long_name: signed short dataset
+    units: '1'
+    valid_min: -1024
+    valid_max: 1024
+  /group_03/ds_05:
+    _dtype: u4
+    _dims: [number_of_images]
+    long_name: unsigned int dataset
+    units: '1'
+    valid_min: 0
+    valid_max: 1000000
+  /group_03/ds_06:
+    _dtype: i4
+    _dims: [number_of_images]
+    long_name: signed int dataset
+    units: '1'
+    valid_min: -1000000
+    valid_max: 1000000
+  /group_03/ds_07:
+    _dtype: u8
+    _dims: [number_of_images]
+    long_name: unsigned long dataset
+    units: '1'
+    valid_min: 0
+    valid_max: 999999
+  /group_03/ds_08:
+    _dtype: i8
+    _dims: [number_of_images]
+    long_name: signed long dataset
+    units: '1'
+    valid_min: -999999
+    valid_max: 999999
+  #/group_03/ds_09:
+  #  _dtype: f2
+  #  _dims: [number_of_images]
+  #  long_name: half float dataset
+  #  units: '1'
+  #  valid_min: -999.9
+  #  valid_max: 999.9
+  /group_03/ds_10:
+    _dtype: f4
+    _dims: [number_of_images]
+    long_name: float dataset
+    units: '1'
+    valid_min: -999.9
+    valid_max: 999.9
+  /group_03/ds_11:
+    _dtype: f8
+    _dims: [number_of_images]
+    long_name: double dataset
+    units: '1'
+    valid_min: -999999.9
+    valid_max: 999999.9
+  #/group_03/ds_12:
+  #  _dtype: complex64
+  #  _dims: [number_of_images]
+  #  long_name: complex64 dataset
+  #  valid_min: 0j
+  #  valid_max: 999999.9j
+  /group_03/ds_13:
+    _dtype: str
+    _dims: [number_of_images]
+    long_name: string dataset
+  /group_03/ds_14:
+    _dtype: str
+    _dims: [scalar]
+    long_name: scalar(str)
+  /group_03/ds_15:
+    _dtype: int
+    _dims: [scalar]
+    long_name: scalar(int)

@@ -42,7 +42,7 @@ dimensions:
   row:
     _dtype: u2
     _size: 512
-  viewport:
+  /group_03/viewport:
     _dtype: str
     _size: 5
     _values: ['-50', '-20', '+0', '+20', '+50']
