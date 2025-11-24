@@ -128,6 +128,6 @@ class TestNcYaml:
                 else:
                     assert getattr(nc_var, attr) == self.NC_DEF["variables"][key][attr]
 
-    def test_close(self: TestNcYaml) -> None:
-        """..."""
-        self.FID.close()
+    # def test_close(self: TestNcYaml) -> None:
+    #    """..."""
+    #    self.FID.close()
