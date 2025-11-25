@@ -22,7 +22,22 @@
 
 from __future__ import annotations
 
+from importlib.resources import files
+
+import pytest
+
+from h5yaml.conf_from_yaml import conf_from_yaml
+
 
 def test_from_yaml() -> None:
     """..."""
-    return
+    with pytest.raises(FileNotFoundError, match="not found") as excinfo:
+        _ = conf_from_yaml(files("h5yaml.Data") / "not_existing.yaml")
+    assert f"{files('h5yaml.Data') / 'not_existing.yaml'} not found" in str(excinfo)
+
+    with pytest.raises(RuntimeError, match=r"Failed to parse .*") as excinfo:
+        _ = conf_from_yaml("README.md")
+    assert "Failed to parse" in str(excinfo)
+
+    res = conf_from_yaml(files("h5yaml.Data") / "nc_testing.yaml")
+    assert isinstance(res, dict)

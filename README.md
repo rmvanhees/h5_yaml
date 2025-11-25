@@ -29,7 +29,19 @@ However, package `netCDF4` has some limitations, which `h5py` has not, for examp
 not allow variable-length variables to have a compound data-type.
 
 ## Installation
-Releases of the code, starting from version 0.1, will be made available via PyPI.
+The package `h5yaml` is available from PyPI. To install it use `pip`:
+
+> $ pip install [--user] h5yaml
+
+The module `h5yaml` requires Python3.10+ and Python modules: h5py (v3.14+), netCDF4 (v1.7+) and numpy (v2.0+).
+
+**Note**: the packages `h5py` and `netCDF4` come with their own HDF5 libraries. If these are different then they may
+collide and result in a *''HDF5 error''*.
+If this is the case then you have to install the development packages of HDF5 and netCDF4 (or compile them from source).
+And reinstall `h5py` and `netCDF4` using the commands:
+
+> $ pip uninstall h5py; pip install --no-binary=h5py h5py
+> $ pip uninstall netCDF4; pip install --no-binary=netCDF4 netCDF4
 
 ## Usage
 
@@ -144,7 +156,7 @@ The YAML file should be structured as follows:
 
 ## Support [TBW]
 
-## Roadmap
+## Road map
 
  * Release v0.1 : stable API to read your YAML files and generate the HDF5/netCDF4 file
 

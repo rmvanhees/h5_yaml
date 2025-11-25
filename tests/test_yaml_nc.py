@@ -38,21 +38,21 @@ class TestNcYaml:
     FID = NcYaml(files("h5yaml.Data") / "nc_testing.yaml").diskless()
 
     def test_exceptions(self: TestNcYaml) -> None:
-        """..."""
+        """Unit-test for the class exdeptions."""
         # tests which should raise an exception because the file can not be created
         l1a_name = "/this/folder/does/not/exists/test.nc"
         with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
-            _ = NcYaml(files("h5yaml.Data") / "nc_testing.yaml").create(l1a_name)
+            NcYaml(files("h5yaml.Data") / "nc_testing.yaml").create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo)
 
         l1a_name = Path("/this/folder/does/not/exists/test.nc")
         with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
-            _ = NcYaml(files("h5yaml.Data") / "nc_testing.yaml").create(l1a_name)
+            NcYaml(files("h5yaml.Data") / "nc_testing.yaml").create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo)
 
         l1a_name = "/test.nc"
         with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
-            _ = NcYaml(files("h5yaml.Data") / "nc_testing.yaml").create(l1a_name)
+            NcYaml(files("h5yaml.Data") / "nc_testing.yaml").create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo.value)
 
         # tests which raise an exception because the YAML file is corrupted
@@ -62,15 +62,19 @@ class TestNcYaml:
         assert f"{file_path} not found" in str(excinfo.value)
 
     def test_groups(self: TestNcYaml) -> None:
-        """..."""
+        """Unit-test to check the groups."""
         if "groups" not in self.NC_DEF:
             return
 
         for key in self.NC_DEF["groups"]:
-            assert key in self.FID.groups
+            pkey = PurePosixPath(key)
+            if pkey.is_absolute():
+                assert pkey.name in self.FID[pkey.parent].groups
+            else:
+                assert key in self.FID.groups
 
     def test_dimensions(self: TestNcYaml) -> None:
-        """..."""
+        """Unit-test to check the dimensions."""
         if "dimensions" not in self.NC_DEF:
             return
 
@@ -102,7 +106,7 @@ class TestNcYaml:
                     assert getattr(nc_dim, attr) == self.NC_DEF["dimensions"][key][attr]
 
     def test_compounds(self: TestNcYaml) -> None:
-        """..."""
+        """Unit-test to check the compounds."""
         if "compounds" not in self.NC_DEF:
             return
 
@@ -110,7 +114,7 @@ class TestNcYaml:
             assert key in self.FID.cmptypes
 
     def test_variables(self: TestNcYaml) -> None:
-        """..."""
+        """Unit-test to check the variables."""
         if "variables" not in self.NC_DEF:
             return
 
@@ -137,6 +141,6 @@ class TestNcYaml:
                 else:
                     assert getattr(nc_var, attr) == self.NC_DEF["variables"][key][attr]
 
-    # def test_close(self: TestNcYaml) -> None:
-    #    """..."""
-    #    self.FID.close()
+    def test_close(self: TestNcYaml) -> None:
+        """Close the in-memory netCDF4 file."""
+        self.FID.close()

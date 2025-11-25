@@ -45,7 +45,7 @@ def conf_from_yaml(file_path: Path | str) -> dict:
 
     """
     if isinstance(file_path, str):
-        file_path = Path(str)
+        file_path = Path(file_path)
 
     if not file_path.is_file():
         raise FileNotFoundError(f"{file_path} not found")
@@ -53,7 +53,7 @@ def conf_from_yaml(file_path: Path | str) -> dict:
     with file_path.open("r", encoding="ascii") as fid:
         try:
             settings = yaml.safe_load(fid)
-        except yaml.YAMLError as exc:
-            raise RuntimeError from exc
+        except yaml.parser.ParserError as exc:
+            raise RuntimeError(f"Failed to parse {file_path}") from exc
 
     return settings

@@ -35,7 +35,6 @@ from netCDF4 import Dataset
 
 from .conf_from_yaml import conf_from_yaml
 from .lib.adjust_attr import adjust_attr
-from .lib.chunksizes import guess_chunks
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -43,9 +42,16 @@ if TYPE_CHECKING:
 
 # - class definition -----------------------------------
 class NcYaml:
-    """Class to create a HDF5/netCDF4 formated file from a YAML configuration file."""
+    """Class to create a HDF5/netCDF4 formated file from a YAML configuration file.
 
-    def __init__(self: NcYaml, nc_yaml_fl: Path) -> None:
+    Parameters
+    ----------
+    nc_yaml_fl :  Path | str
+       YAML file with the netCDF4 format definition
+
+    """
+
+    def __init__(self: NcYaml, nc_yaml_fl: Path | str) -> None:
         """Construct a NcYaml instance."""
         self.logger = logging.getLogger("h5yaml.NcYaml")
 
@@ -172,10 +178,8 @@ class NcYaml:
 
             if val["_dtype"] in fid.cmptypes:
                 ds_dtype = fid.cmptypes[val["_dtype"]].dtype
-                sz_dtype = ds_dtype.itemsize
             else:
                 ds_dtype = val["_dtype"]
-                sz_dtype = np.dtype(val["_dtype"]).itemsize
 
             fillvalue = None
             if "_FillValue" in val:
@@ -226,16 +230,16 @@ class NcYaml:
             if n_udim > 1:
                 raise ValueError("more than one unlimited dimension")
 
-            # obtain chunk-size settings
-            ds_chunk = (
-                val["_chunks"] if "_chunks" in val else guess_chunks(ds_shape, sz_dtype)
-            )
+            if None in ds_maxshape and val.get("_chunks") == "contiguous":
+                raise KeyError(
+                    "you can not create a contiguous dataset with unlimited dimensions."
+                )
 
             if val["_dtype"] in fid.cmptypes:
                 val["_dtype"] = fid.cmptypes[val["_dtype"]]
 
             # create the variable
-            if ds_chunk == "contiguous":
+            if val.get("_chunks") == "contiguous":
                 dset = var_grp.createVariable(
                     var_name,
                     val["_dtype"],
@@ -244,25 +248,24 @@ class NcYaml:
                     contiguous=True,
                 )
             else:
+                ds_chunk = val.get("_chunks")
+                if ds_chunk is not None and not isinstance(ds_chunk, bool):
+                    ds_chunk = tuple(ds_chunk)
                 if val.get("_vlen"):
                     if val["_dtype"] in fid.cmptypes:
                         raise ValueError("can not have vlen with compounds")
                     val["_dtype"] = fid.createVLType(ds_dtype, val["_dtype"])
                     fillvalue = None
-                    if ds_maxshape == (None,):
-                        ds_chunk = (16,)
 
                 dset = var_grp.createVariable(
                     var_name,
                     str if val["_dtype"] == "str" else val["_dtype"],
                     dimensions=var_dims,
                     fill_value=fillvalue,
-                    contiguous=False,
                     compression=compression,
                     complevel=complevel,
-                    chunksizes=(
-                        ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk)
-                    ),
+                    chunksizes=ds_chunk,
+                    contiguous=False,
                 )
             dset.setncatts(
                 {

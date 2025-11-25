@@ -25,6 +25,8 @@ groups:
   - group_01
   - group_02
   - group_03
+  - processing_control
+  - /processing_control/input_parameters
 
 # Define dimensions
 # Note dimensions with an attribute 'long_name' will also be generated as variable
@@ -82,6 +84,16 @@ variables:
     _dtype: u2
     _dims: [number_of_images, column, row]
     _FillValue: 65535
+    long_name: Detector pixel values
+    comment: unbinned full-frame data
+    units: '1'
+    valid_min: 0
+    valid_max: 65534
+  /group_00/detector_images_chunked:
+    _dtype: u2
+    _dims: [number_of_images, column, row]
+    _FillValue: 65535
+    _chunks: [1, 640, 512]
     long_name: Detector pixel values
     comment: unbinned full-frame data
     units: '1'
@@ -190,7 +202,7 @@ variables:
   #  valid_max: 999.9
   /group_03/ds_10:
     _dtype: f4
-    _dims: [number_of_images]
+    _dims: [number_of_images, /group_03/viewport]
     long_name: float dataset
     units: '1'
     valid_min: -999.9

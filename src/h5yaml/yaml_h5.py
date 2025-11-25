@@ -32,7 +32,6 @@ import numpy as np
 
 from .conf_from_yaml import conf_from_yaml
 from .lib.adjust_attr import adjust_attr
-from .lib.chunksizes import guess_chunks
 
 
 # - class definition -----------------------------------
@@ -41,12 +40,12 @@ class H5Yaml:
 
     Parameters
     ----------
-    h5_yaml_fl :  Path
-       YAML files with the HDF5 format definition
+    h5_yaml_fl :  Path | str
+       YAML file with the HDF5 format definition
 
     """
 
-    def __init__(self: H5Yaml, h5_yaml_fl: Path) -> None:
+    def __init__(self: H5Yaml, h5_yaml_fl: Path | str) -> None:
         """Construct a H5Yaml instance."""
         self.logger = logging.getLogger("h5yaml.H5Yaml")
 
@@ -72,12 +71,14 @@ class H5Yaml:
                 )
 
             if val["_size"] == 0:
-                ds_chunk = val.get("_chunks", (50,))
+                ds_chunk = val.get("_chunks")
+                if ds_chunk is not None and not isinstance(ds_chunk, bool):
+                    ds_chunk = tuple(ds_chunk)
                 dset = fid.create_dataset(
                     key,
                     shape=(0,),
                     dtype="T" if val["_dtype"] == "str" else val["_dtype"],
-                    chunks=ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk),
+                    chunks=ds_chunk,
                     maxshape=(None,),
                     fillvalue=fillvalue,
                 )
@@ -153,10 +154,8 @@ class H5Yaml:
         for key, val in self.h5_def["variables"].items():
             if val["_dtype"] in fid:
                 ds_dtype = fid[val["_dtype"]]
-                dtype_size = fid[val["_dtype"]].dtype.itemsize
             else:
                 ds_dtype = "T" if val["_dtype"] == "str" else val["_dtype"]
-                dtype_size = np.dtype(val["_dtype"]).itemsize
 
             fillvalue = None
             if "_FillValue" in val:
@@ -190,15 +189,13 @@ class H5Yaml:
             if n_udim > 1:
                 raise ValueError(f"{key} has more than one unlimited dimension")
 
-            # obtain chunk-size settings
-            ds_chunk = (
-                val["_chunks"]
-                if "_chunks" in val
-                else guess_chunks(ds_shape, dtype_size)
-            )
+            if None in ds_maxshape and val.get("_chunks") == "contiguous":
+                raise KeyError(
+                    "you can not create a contiguous dataset with unlimited dimensions."
+                )
 
             # create the variable
-            if ds_chunk == "contiguous":
+            if val.get("_chunks") == "contiguous":
                 dset = fid.create_dataset(
                     key,
                     ds_shape,
@@ -208,6 +205,9 @@ class H5Yaml:
                     fillvalue=fillvalue,
                 )
             else:
+                ds_chunk = val.get("_chunks")
+                if ds_chunk is not None and not isinstance(ds_chunk, bool):
+                    ds_chunk = tuple(ds_chunk)
                 compression = None
                 shuffle = False
                 # currently only gzip compression is supported
@@ -225,14 +225,12 @@ class H5Yaml:
                         fid[ds_name] = h5py.vlen_dtype(ds_dtype)
                     ds_dtype = fid[ds_name]
                     fillvalue = None
-                    if ds_maxshape == (None,):
-                        ds_chunk = (16,)
 
                 dset = fid.create_dataset(
                     key,
                     ds_shape,
                     dtype=ds_dtype,
-                    chunks=ds_chunk if isinstance(ds_chunk, tuple) else tuple(ds_chunk),
+                    chunks=ds_chunk,
                     maxshape=ds_maxshape,
                     fillvalue=fillvalue,
                     compression=compression,

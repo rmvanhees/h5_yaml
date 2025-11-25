@@ -38,21 +38,21 @@ class TestH5Yaml:
     FID = H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").diskless()
 
     def test_exceptions(self: TestH5Yaml) -> None:
-        """..."""
+        """Unit-test for class exeptions."""
         # tests which should raise an exception because the file can not be created
         l1a_name = "/this/folder/does/not/exists/test.h5"
         with pytest.raises(FileNotFoundError, match=r"[Errno 2] .*") as excinfo:
-            _ = H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create(l1a_name)
+            H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create(l1a_name)
         assert "'No such file or directory" in str(excinfo)
 
         l1a_name = Path("/this/folder/does/not/exists/test.h5")
         with pytest.raises(FileNotFoundError, match=r"[Errno 2] .*") as excinfo:
-            _ = H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create(l1a_name)
+            H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create(l1a_name)
         assert "'No such file or directory" in str(excinfo)
 
         l1a_name = "/test.h5"
         with pytest.raises(RuntimeError, match=r"failed create .*") as excinfo:
-            _ = H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create(l1a_name)
+            H5Yaml(files("h5yaml.Data") / "h5_testing.yaml").create(l1a_name)
         assert f"failed create {l1a_name}" in str(excinfo.value)
 
         # tests which raise an exception because the YAML file is corrupted
@@ -62,11 +62,11 @@ class TestH5Yaml:
         assert f"{file_path} not found" in str(excinfo.value)
 
         with pytest.raises(ValueError, match=r".* unlimited dimension") as excinfo:
-            _ = H5Yaml(files("h5yaml.Data") / "h5_unsupported.yaml").create("klad.h5")
+            H5Yaml(files("h5yaml.Data") / "h5_unsupported.yaml").create("klad.h5")
         assert "has more than one unlimited dimension" in str(excinfo.value)
 
     def test_groups(self: TestH5Yaml) -> None:
-        """..."""
+        """Unit-test to check the groups."""
         if "groups" not in self.H5_DEF:
             return
 
@@ -74,7 +74,7 @@ class TestH5Yaml:
             assert key in self.FID
 
     def test_dimensions(self: TestH5Yaml) -> None:
-        """..."""
+        """Unit-test to check the dimensions."""
         if "dimensions" not in self.H5_DEF:
             return
 
@@ -101,7 +101,7 @@ class TestH5Yaml:
                 assert self.FID[key].attrs[attr] == self.H5_DEF["dimensions"][key][attr]
 
     def test_compounds(self: TestH5Yaml) -> None:
-        """..."""
+        """Unit-test to check the compounds."""
         if "compounds" not in self.H5_DEF:
             return
 
@@ -109,7 +109,7 @@ class TestH5Yaml:
             assert key in self.FID
 
     def test_variables(self: TestH5Yaml) -> None:
-        """..."""
+        """Unit-test to check the variables."""
         if "variables" not in self.H5_DEF:
             return
 
@@ -130,5 +130,5 @@ class TestH5Yaml:
                     assert self.FID[key].attrs[attr] == dset[key][attr]
 
     def test_close(self: TestH5Yaml) -> None:
-        """..."""
+        """Close the in-memory HDF5 file."""
         self.FID.close()
