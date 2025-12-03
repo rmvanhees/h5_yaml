@@ -128,6 +128,16 @@ The YAML file should be structured as follows:
 
    ```
    variables:
+     /science_data/detector_images:
+       _dtype: u2
+       _dims: [number_of_images, samples_per_image]
+	   _compression: 3
+       _FillValue: 65535
+       long_name: Detector pixel values
+       coverage_content_type: image
+       units: '1'
+       valid_min: 0
+       valid_max: 65534
      /image_attributes/nr_coadditions:
        _dtype: u2
        _dims: [number_of_images]
@@ -143,8 +153,8 @@ The YAML file should be structured as follows:
        units: seconds
      stats_163:
        _dtype: stats_dtype
-       _vlen: True
        _dims: [days]
+       _vlen: True
        comment: detector map statistics (MPS=163)
    ```
 
