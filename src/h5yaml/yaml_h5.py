@@ -40,30 +40,56 @@ class H5Yaml:
 
     Parameters
     ----------
-    h5_yaml_fl :  Path | str
-       YAML file with the HDF5 format definition
+    h5_yaml_fl :  Path | str | list[Path | str]
+       YAML files with the HDF5 format definition
 
     """
 
-    def __init__(self: H5Yaml, h5_yaml_fl: Path | str) -> None:
+    def __init__(self: H5Yaml, h5_yaml_fl: Path | str | list[Path | str]) -> None:
         """Construct a H5Yaml instance."""
         self.logger = logging.getLogger("h5yaml.H5Yaml")
+        self._h5_def = {
+            "groups": set(),
+            "attrs_global": {},
+            "attrs_groups": {},
+            "compounds": {},
+            "dimensions": {},
+            "variables": {},
+        }
 
-        try:
-            self._h5_def = conf_from_yaml(h5_yaml_fl)
-        except RuntimeError as exc:
-            raise RuntimeError from exc
+        for yaml_fl in h5_yaml_fl if isinstance(h5_yaml_fl, list) else [h5_yaml_fl]:
+            print(yaml_fl)
+            try:
+                config = conf_from_yaml(yaml_fl)
+            except RuntimeError as exc:
+                raise RuntimeError from exc
+            print(config)
+            for key in self._h5_def:
+                if key in config:
+                    print(key, config[key])
+                    self._h5_def[key] |= (
+                        set(config[key]) if key == "groups" else config[key]
+                    )
 
-        self.yaml_dir = h5_yaml_fl.parent
+    def __attrs(self: H5Yaml, fid: h5py.File) -> None:
+        """Create global and group attributes."""
+        for key, value in self._h5_def["attrs_global"].items():
+            if key not in fid.attrs and value != "TBW":
+                fid.attrs[key] = value
+
+        for key, value in self._h5_def["attrs_groups"].items():
+            if key not in fid.attrs and value != "TBW":
+                fid[str(Path(key).parent)].attrs[Path(key).name] = value
 
     def __groups(self: H5Yaml, fid: h5py.File) -> None:
         """Create groups in HDF5 product."""
-        for key in self.h5_def["groups"]:
-            _ = fid.create_group(key)
+        for key in self._h5_def["groups"]:
+            print(f"create group: {key}")
+            _ = fid.require_group(key)
 
     def __dimensions(self: H5Yaml, fid: h5py.File) -> None:
         """Add dimensions to HDF5 product."""
-        for key, val in self.h5_def["dimensions"].items():
+        for key, val in self._h5_def["dimensions"].items():
             fillvalue = None
             if "_FillValue" in val:
                 fillvalue = (
@@ -102,56 +128,21 @@ class H5Yaml:
                 if not attr.startswith("_"):
                     dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
 
-    def __compounds(self: H5Yaml, fid: h5py.File) -> dict[str, str | int | float]:
+    def __compounds(self: H5Yaml, fid: h5py.File) -> None:
         """Add compound datatypes to HDF5 product."""
-        if "compounds" not in self.h5_def:
-            return {}
+        for key, val in self._h5_def["compounds"].items():
+            fid[key] = np.dtype([(k, v[0]) for k, v in val.items()])
 
-        compounds = {}
-        if isinstance(self.h5_def["compounds"], list):
-            file_list = self.h5_def["compounds"].copy()
-            self.h5_def["compounds"] = {}
-            for name in file_list:
-                if not (yaml_fl := self.yaml_dir / name).is_file():
-                    continue
-                try:
-                    res = conf_from_yaml(yaml_fl)
-                except RuntimeError as exc:
-                    raise RuntimeError from exc
-                for key, value in res.items():
-                    self.h5_def["compounds"][key] = value
-
-        for key, val in self.h5_def["compounds"].items():
-            compounds[key] = {
-                "dtype": [],
-                "units": [],
-                "names": [],
-            }
-
-            for _key, _val in val.items():
-                compounds[key]["dtype"].append((_key, _val[0]))
-                if len(_val) == 3:
-                    compounds[key]["units"].append(_val[1])
-                compounds[key]["names"].append(_val[2] if len(_val) == 3 else _val[1])
-
-            fid[key] = np.dtype(compounds[key]["dtype"])
-
-        return compounds
-
-    def __variables(
-        self: H5Yaml, fid: h5py.File, compounds: dict[str, str | int | float] | None
-    ) -> None:
+    def __variables(self: H5Yaml, fid: h5py.File) -> None:
         """Add datasets to HDF5 product.
 
         Parameters
         ----------
         fid :  h5py.File
            HDF5 file pointer (mode 'r+')
-        compounds :  dict[str, str | int | float]
-           Definition of the compound(s) in the product
 
         """
-        for key, val in self.h5_def["variables"].items():
+        for key, val in self._h5_def["variables"].items():
             if val["_dtype"] in fid:
                 ds_dtype = fid[val["_dtype"]]
             else:
@@ -244,11 +235,14 @@ class H5Yaml:
                 if not attr.startswith("_"):
                     dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
 
-            if compounds is not None and val["_dtype"] in compounds:
-                if compounds[val["_dtype"]]["units"]:
-                    dset.attrs["units"] = compounds[val["_dtype"]]["units"]
-                if compounds[val["_dtype"]]["names"]:
-                    dset.attrs["long_name"] = compounds[val["_dtype"]]["names"]
+            if val["_dtype"] in self._h5_def["compounds"]:
+                compound = self._h5_def["compounds"][val["_dtype"]]
+                res = [v[2] for k, v in compound.items() if len(v) == 3]
+                if res:
+                    dset.attrs["units"] = [v[1] for k, v in compound.items()]
+                    dset.attrs["long_name"] = res
+                else:
+                    dset.attrs["long_name"] = [v[1] for k, v in compound.items()]
 
     @property
     def h5_def(self: H5Yaml) -> dict:
@@ -258,10 +252,11 @@ class H5Yaml:
     def diskless(self: H5Yaml) -> h5py.File:
         """Create a HDF5/netCDF4 file in memory."""
         fid = h5py.File.in_memory()
-        if "groups" in self.h5_def:
-            self.__groups(fid)
+        self.__groups(fid)
         self.__dimensions(fid)
-        self.__variables(fid, self.__compounds(fid))
+        self.__compounds(fid)
+        self.__variables(fid)
+        self.__attrs(fid)
         return fid
 
     def create(self: H5Yaml, l1a_name: Path | str) -> None:
@@ -275,9 +270,10 @@ class H5Yaml:
         """
         try:
             with h5py.File(l1a_name, "w") as fid:
-                if "groups" in self.h5_def:
-                    self.__groups(fid)
+                self.__groups(fid)
                 self.__dimensions(fid)
-                self.__variables(fid, self.__compounds(fid))
+                self.__compounds(fid)
+                self.__variables(fid)
+                self.__attrs(fid)
         except PermissionError as exc:
             raise RuntimeError(f"failed create {l1a_name}") from exc

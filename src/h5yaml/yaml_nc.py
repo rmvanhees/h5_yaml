@@ -62,6 +62,19 @@ class NcYaml:
 
         self.yaml_dir = nc_yaml_fl.parent
 
+    def __attrs(self: NcYaml, fid: Dataset) -> None:
+        """Create global and group attributes."""
+        fid.setncatts(
+            {k: v for k, v in self.nc_def["attrs_global"].items() if v != "TBW"}
+        )
+
+        if "attrs_groups" not in self.nc_def:
+            return
+
+        fid.setncatts(
+            {k: v for k, v in self.nc_def["attrs_groups"].items() if v != "TBW"}
+        )
+
     def __groups(self: NcYaml, fid: Dataset) -> None:
         """Create groups in HDF5 product."""
         for key in self.nc_def["groups"]:
@@ -290,6 +303,8 @@ class NcYaml:
         """Create a HDF5/netCDF4 file in memory."""
         fid = Dataset("diskless_test.nc", "w", diskless=True, persistent=False)
         self.__groups(fid)
+        if "attrs_global" in self.nc_def():
+            self.__attrs(fid)
         self.__dimensions(fid)
         self.__variables(fid, self.__compounds(fid))
         return fid
@@ -306,6 +321,8 @@ class NcYaml:
         try:
             with Dataset(l1a_name, "w") as fid:
                 self.__groups(fid)
+                if "attrs_global" in self.nc_def():
+                    self.__attrs(fid)
                 self.__dimensions(fid)
                 self.__variables(fid, self.__compounds(fid))
         except PermissionError as exc:
