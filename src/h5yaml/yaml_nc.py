@@ -18,7 +18,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Create HDF5/netCDF4 formatted file from a YAML configuration file using netCDF4."""
+"""Create netCDF4 formatted file from a YAML configuration file using netCDF4."""
 
 from __future__ import annotations
 
@@ -42,28 +42,49 @@ if TYPE_CHECKING:
 
 # - class definition -----------------------------------
 class NcYaml:
-    """Class to create a HDF5/netCDF4 formated file from a YAML configuration file.
+    """Class to create a netCDF4 formated file from a YAML configuration file.
 
     Parameters
     ----------
-    nc_yaml_fl :  Path | str
-       YAML file with the netCDF4 format definition
+    nc_yaml_fl :  Path | str | list[Path | str]
+       YAML files with the netCDF4 format definition
 
     """
 
-    def __init__(self: NcYaml, nc_yaml_fl: Path | str) -> None:
+    def __init__(self: NcYaml, nc_yaml_fl: Path | str | list[Path | str]) -> None:
         """Construct a NcYaml instance."""
         self.logger = logging.getLogger("h5yaml.NcYaml")
+        self._nc_def = {
+            "groups": set(),
+            "attrs_global": {},
+            "attrs_groups": {},
+            "compounds": {},
+            "dimensions": {},
+            "variables": {},
+        }
 
-        try:
-            self._nc_def = conf_from_yaml(nc_yaml_fl)
-        except RuntimeError as exc:
-            raise RuntimeError from exc
+        for yaml_fl in nc_yaml_fl if isinstance(nc_yaml_fl, list) else [nc_yaml_fl]:
+            print(yaml_fl)
+            try:
+                config = conf_from_yaml(nc_yaml_fl)
+            except RuntimeError as exc:
+                raise RuntimeError from exc
 
-        self.yaml_dir = nc_yaml_fl.parent
+            for key in self._nc_def:
+                if key in config:
+                    self._nc_def[key] |= (
+                        set(config[key]) if key == "groups" else config[key]
+                    )
 
     def __attrs(self: NcYaml, fid: Dataset) -> None:
-        """Create global and group attributes."""
+        """Create global and group attributes.
+
+        Parameters
+        ----------
+        fid :  netCDF4.Dataset
+           netCDF4 Dataset (mode 'r+')
+
+        """
         fid.setncatts(
             {k: v for k, v in self.nc_def["attrs_global"].items() if v != "TBW"}
         )
@@ -76,16 +97,30 @@ class NcYaml:
         )
 
     def __groups(self: NcYaml, fid: Dataset) -> None:
-        """Create groups in HDF5 product."""
+        """Create groups in a netCDF4 product.
+
+        Parameters
+        ----------
+        fid :  netCDF4.Dataset
+           netCDF4 Dataset (mode 'r+')
+
+        """
         for key in self.nc_def["groups"]:
             pkey = PurePosixPath(key)
             if pkey.is_absolute():
                 _ = fid[pkey.parent].createGroup(pkey.name)
-            else:
+            elif key not in fid.groups:
                 _ = fid.createGroup(key)
 
     def __dimensions(self: NcYaml, fid: Dataset) -> None:
-        """Add dimensions to HDF5 product."""
+        """Add dimensions to a netCDF4 product.
+
+        Parameters
+        ----------
+        fid :  netCDF4.Dataset
+           netCDF4 Dataset (mode 'r+')
+
+        """
         for key, value in self.nc_def["dimensions"].items():
             pkey = PurePosixPath(key)
             if pkey.is_absolute():
@@ -132,56 +167,26 @@ class NcYaml:
                 }
             )
 
-    def __compounds(self: NcYaml, fid: Dataset) -> dict[str, str | int | float]:
-        """Add compound datatypes to HDF5 product."""
-        if "compounds" not in self.nc_def:
-            return {}
-
-        compounds = {}
-        if isinstance(self.nc_def["compounds"], list):
-            file_list = self.nc_def["compounds"].copy()
-            self.nc_def["compounds"] = {}
-            for name in file_list:
-                if not (yaml_fl := self.yaml_dir / name).is_file():
-                    continue
-                try:
-                    res = conf_from_yaml(yaml_fl)
-                except RuntimeError as exc:
-                    raise RuntimeError from exc
-                for key, value in res.items():
-                    self.nc_def["compounds"][key] = value
-
-        for key, value in self.nc_def["compounds"].items():
-            compounds[key] = {
-                "dtype": [],
-                "units": [],
-                "names": [],
-            }
-
-            for _key, _val in value.items():
-                compounds[key]["dtype"].append((_key, _val[0]))
-                if len(_val) == 3:
-                    compounds[key]["units"].append(_val[1])
-                compounds[key]["names"].append(_val[2] if len(_val) == 3 else _val[1])
-
-            comp_t = np.dtype(compounds[key]["dtype"])
-            _ = fid.createCompoundType(comp_t, key)
-
-        return compounds
-
-    def __variables(
-        self: NcYaml,
-        fid: Dataset,
-        compounds: dict[str, str | int | float] | None,
-    ) -> None:
-        """Add datasets to HDF5 product.
+    def __compounds(self: NcYaml, fid: Dataset) -> None:
+        """Add compound datatypes to a netCDF4 product.
 
         Parameters
         ----------
         fid :  netCDF4.Dataset
-           HDF5 file pointer (mode 'r+')
-        compounds :  dict[str, str | int | float]
-           Definition of the compound(s) in the product
+           netCDF4 Dataset (mode 'r+')
+
+        """
+        for key, val in self.nc_def["compounds"].items():
+            comp_t = np.dtype([(k, v[0]) for k, v in val.items()])
+            _ = fid.createCompoundType(comp_t, key)
+
+    def __variables(self: NcYaml, fid: Dataset) -> None:
+        """Add datasets to a netCDF4 product.
+
+        Parameters
+        ----------
+        fid :  netCDF4.Dataset
+           netCDF4 Dataset (mode 'r+')
 
         """
         for key, val in self.nc_def["variables"].items():
@@ -288,42 +293,45 @@ class NcYaml:
                 }
             )
 
-            if compounds is not None and val["_dtype"] in compounds:
-                if compounds[val["_dtype"]]["units"]:
-                    dset.attrs["units"] = compounds[val["_dtype"]]["units"]
-                if compounds[val["_dtype"]]["names"]:
-                    dset.attrs["long_name"] = compounds[val["_dtype"]]["names"]
+            if val["_dtype"] in self._nc_def["compounds"]:
+                compound = self._nc_def["compounds"][val["_dtype"]]
+                res = [v[2] for k, v in compound.items() if len(v) == 3]
+                if res:
+                    dset.attrs["units"] = [v[1] for k, v in compound.items()]
+                    dset.attrs["long_name"] = res
+                else:
+                    dset.attrs["long_name"] = [v[1] for k, v in compound.items()]
 
     @property
     def nc_def(self: NcYaml) -> dict:
-        """Return definition of the HDF5/netCDF4 product."""
+        """Return definition of the netCDF4 product."""
         return self._nc_def
 
     def diskless(self: NcYaml) -> Dataset:
-        """Create a HDF5/netCDF4 file in memory."""
+        """Create a netCDF4 file in memory."""
         fid = Dataset("diskless_test.nc", "w", diskless=True, persistent=False)
         self.__groups(fid)
-        if "attrs_global" in self.nc_def():
-            self.__attrs(fid)
         self.__dimensions(fid)
-        self.__variables(fid, self.__compounds(fid))
+        self.__compounds(fid)
+        self.__variables(fid)
+        self.__attrs(fid)
         return fid
 
     def create(self: NcYaml, l1a_name: Path | str) -> None:
-        """Create a HDF5/netCDF4 file (overwrite if exist).
+        """Create a netCDF4 file (overwrite if exist).
 
         Parameters
         ----------
         l1a_name :  Path | str
-           Full name of the HDF5/netCDF4 file to be generated
+           Full name of the netCDF4 file to be generated
 
         """
         try:
             with Dataset(l1a_name, "w") as fid:
                 self.__groups(fid)
-                if "attrs_global" in self.nc_def():
-                    self.__attrs(fid)
                 self.__dimensions(fid)
-                self.__variables(fid, self.__compounds(fid))
+                self.__compounds(fid)
+                self.__variables(fid)
+                self.__attrs(fid)
         except PermissionError as exc:
             raise RuntimeError(f"failed to create {l1a_name}") from exc
