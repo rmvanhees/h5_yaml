@@ -63,16 +63,22 @@ class H5Yaml:
                 config = conf_from_yaml(yaml_fl)
             except RuntimeError as exc:
                 raise RuntimeError from exc
-            print(config)
+
             for key in self._h5_def:
                 if key in config:
-                    print(key, config[key])
                     self._h5_def[key] |= (
                         set(config[key]) if key == "groups" else config[key]
                     )
 
     def __attrs(self: H5Yaml, fid: h5py.File) -> None:
-        """Create global and group attributes."""
+        """Create global and group attributes.
+
+        Parameters
+        ----------
+        fid :  h5py.File
+           HDF5 file pointer (mode 'r+')
+
+        """
         for key, value in self._h5_def["attrs_global"].items():
             if key not in fid.attrs and value != "TBW":
                 fid.attrs[key] = value
@@ -82,13 +88,27 @@ class H5Yaml:
                 fid[str(Path(key).parent)].attrs[Path(key).name] = value
 
     def __groups(self: H5Yaml, fid: h5py.File) -> None:
-        """Create groups in HDF5 product."""
+        """Create groups in HDF5 product.
+
+        Parameters
+        ----------
+        fid :  h5py.File
+           HDF5 file pointer (mode 'r+')
+
+        """
         for key in self._h5_def["groups"]:
             print(f"create group: {key}")
             _ = fid.require_group(key)
 
     def __dimensions(self: H5Yaml, fid: h5py.File) -> None:
-        """Add dimensions to HDF5 product."""
+        """Add dimensions to HDF5 product.
+
+        Parameters
+        ----------
+        fid :  h5py.File
+           HDF5 file pointer (mode 'r+')
+
+        """
         for key, val in self._h5_def["dimensions"].items():
             fillvalue = None
             if "_FillValue" in val:
@@ -129,7 +149,14 @@ class H5Yaml:
                     dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
 
     def __compounds(self: H5Yaml, fid: h5py.File) -> None:
-        """Add compound datatypes to HDF5 product."""
+        """Add compound datatypes to HDF5 product.
+
+        Parameters
+        ----------
+        fid :  h5py.File
+           HDF5 file pointer (mode 'r+')
+
+        """
         for key, val in self._h5_def["compounds"].items():
             fid[key] = np.dtype([(k, v[0]) for k, v in val.items()])
 
