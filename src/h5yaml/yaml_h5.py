@@ -58,7 +58,6 @@ class H5Yaml:
         }
 
         for yaml_fl in h5_yaml_fl if isinstance(h5_yaml_fl, list) else [h5_yaml_fl]:
-            print(yaml_fl)
             try:
                 config = conf_from_yaml(yaml_fl)
             except RuntimeError as exc:
@@ -97,7 +96,6 @@ class H5Yaml:
 
         """
         for key in self._h5_def["groups"]:
-            print(f"create group: {key}")
             _ = fid.require_group(key)
 
     def __dimensions(self: H5Yaml, fid: h5py.File) -> None:

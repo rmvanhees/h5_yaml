@@ -25,8 +25,7 @@ from __future__ import annotations
 __all__ = ["NcYaml"]
 
 import logging
-from pathlib import PurePosixPath
-from typing import TYPE_CHECKING
+from pathlib import Path, PurePosixPath
 
 import numpy as np
 
@@ -35,9 +34,6 @@ from netCDF4 import Dataset
 
 from .conf_from_yaml import conf_from_yaml
 from .lib.adjust_attr import adjust_attr
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 # - class definition -----------------------------------
@@ -64,9 +60,8 @@ class NcYaml:
         }
 
         for yaml_fl in nc_yaml_fl if isinstance(nc_yaml_fl, list) else [nc_yaml_fl]:
-            print(yaml_fl)
             try:
-                config = conf_from_yaml(nc_yaml_fl)
+                config = conf_from_yaml(yaml_fl)
             except RuntimeError as exc:
                 raise RuntimeError from exc
 
@@ -85,16 +80,23 @@ class NcYaml:
            netCDF4 Dataset (mode 'r+')
 
         """
-        fid.setncatts(
-            {k: v for k, v in self.nc_def["attrs_global"].items() if v != "TBW"}
-        )
+        for key, val in self.nc_def["attrs_global"].items():
+            if val == "TBW":
+                continue
 
-        if "attrs_groups" not in self.nc_def:
-            return
+            if isinstance(val, str):
+                fid.setncattr_string(key, val)
+            else:
+                fid.setncattr(key, val)
 
-        fid.setncatts(
-            {k: v for k, v in self.nc_def["attrs_groups"].items() if v != "TBW"}
-        )
+        for key, val in self.nc_def["attrs_groups"].items():
+            if val == "TBW":
+                continue
+
+            if isinstance(val, str):
+                fid[str(Path(key).parent)].setncattr_string(Path(key).name, val)
+            else:
+                fid[str(Path(key).parent)].setncattr(Path(key).name, val)
 
     def __groups(self: NcYaml, fid: Dataset) -> None:
         """Create groups in a netCDF4 product.
