@@ -47,13 +47,14 @@ And reinstall `h5py` and `netCDF4` using the commands:
 
 The YAML file should be structured as follows:
 
- * The top level are: 'groups', 'dimensions', 'compounds' and 'variables'.
- - You can also define the global attributes: 'attrs\_global' and group attributes: 'attrs\_groups', version 0.3 and higher.
+ * The top level are: 'groups', 'dimensions', 'compounds', 'variables', 'attrs\_global' and 'attrs\_groups'.
+ * > 'attrs\_global' and 'attrs\_groups' are added in version 0.3.0
+ * The names of the attributes, groups, dimensions, compounds and viariable should be specified as PosixPaths, however:
+   * The names of groups should never start with a slash (always erlative to root);
+   * All other elements which are stored in root should also not start with a slash;
+   * But these elements require a starting slash (absolute paths) when they are stored not the root. 
  * The section 'groups' are optional, but you should provide each group you want to use
-   in your file. 
-   All groups are relative to root.
-   However, the paths of dimensions and variables which are stored in group (e.g. not directly in root) should be absolute (e.g. start with a slash).
-   The 'groups' section in the YAML file may look like this:
+   in your file. The 'groups' section in the YAML file may look like this:
    ```
    groups:
      - engineering_data
@@ -116,14 +117,6 @@ The YAML file should be structured as follows:
        dark_offs: [f4, '1', dark-offset]
    ```
 
-   Alternatively, provide a list with names of YAML files which contain the definitions
-   of the compounds.
-
-   ```
-   compounds:
-     - h5_nomhk_tm.yaml
-     - h5_science_hk.yaml
-   ```
  * The 'variables' are defined by their data-type ('_dtype') and dimensions ('_dims'),
    and optionally chunk sizes ('_chunks'), compression ('_compression'), variable length
    ('_vlen'). In addition, each variable can have as many attributes as you like,
@@ -161,11 +154,9 @@ The YAML file should be structured as follows:
        comment: detector map statistics (MPS=163)
    ```
 
-### Notes and ToDo:
+### Notes and ToDo
 
- * The usage of older versions of h5py may result in broken netCDF4 files
- * Explain usage of parameter '_chunks', which is currently not correctly implemented.
- * Explain that the usage of variable length data-sets may break netCDF4 compatibility
+* The layout of a HDF5 or netCDF4 file can be complex. From version 0.3.0, you can split the file definition over several YAML files and provide a list with the names of YAML files as input to H5Yaml and NcYaml.  
 
 ## Support [TBW]
 
