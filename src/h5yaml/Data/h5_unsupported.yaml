@@ -39,12 +39,6 @@ dimensions:
     valid_min: 0
     valid_max: 92400
     
-# Define compound types
-# - compound elements must have a data-type, and can have a unit and long_name 
-compounds:
-  - h5_compound.yaml
-  - h5_nocompound.yaml
-
 # Define variables
 variables:
   ds_01:

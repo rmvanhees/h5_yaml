@@ -108,11 +108,7 @@ class NcYaml:
 
         """
         for key in self.nc_def["groups"]:
-            pkey = PurePosixPath(key)
-            if pkey.is_absolute():
-                _ = fid[pkey.parent].createGroup(pkey.name)
-            elif key not in fid.groups:
-                _ = fid.createGroup(key)
+            _ = fid.createGroup(key)
 
     def __dimensions(self: NcYaml, fid: Dataset) -> None:
         """Add dimensions to a netCDF4 product.

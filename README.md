@@ -47,17 +47,20 @@ And reinstall `h5py` and `netCDF4` using the commands:
 
 The YAML file should be structured as follows:
 
- * The top level are: 'groups', 'dimensions', 'compounds' and 'variables'
+ * The top level are: 'groups', 'dimensions', 'compounds' and 'variables'.
+ - You can also define the global attributes: 'attrs\_global' and group attributes: 'attrs\_groups', version 0.3 and higher.
  * The section 'groups' are optional, but you should provide each group you want to use
-   in your file. The 'groups' section in the YAML file may look like this:
-
+   in your file. 
+   All groups are relative to root.
+   However, the paths of dimensions and variables which are stored in group (e.g. not directly in root) should be absolute (e.g. start with a slash).
+   The 'groups' section in the YAML file may look like this:
    ```
    groups:
      - engineering_data
      - image_attributes
      - navigation_data
-     - processing_control
      - science_data
+     - processing_control/input_data
    ```
 
  * The section 'dimensions' is obligatory, you should define the dimensions for each

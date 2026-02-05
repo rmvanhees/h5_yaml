@@ -26,7 +26,7 @@ groups:
   - group_02
   - group_03
   - processing_control
-  - /processing_control/input_parameters
+  - processing_control/input_parameters
 
 # Define dimensions
 # Note dimensions with an attribute 'long_name' will also be generated as variable

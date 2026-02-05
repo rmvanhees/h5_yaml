@@ -68,7 +68,7 @@ class TestNcYaml:
 
         for key in self.NC_DEF["groups"]:
             pkey = PurePosixPath(key)
-            if pkey.is_absolute():
+            if len(pkey.parts) > 1:
                 assert pkey.name in self.FID[pkey.parent].groups
             else:
                 assert key in self.FID.groups
