@@ -44,6 +44,12 @@ def adjust_attr(dtype: str, attr_key: str, attr_val: np.generic) -> np.generic:
     -------
     attr_val converted to dtype
     """
+    if attr_key == "flag_values":
+        return np.array(attr_val, dtype=dtype)
+
+    if attr_key == "flag_masks":
+        return np.array(attr_val, dtype=dtype)
+
     if attr_key in ("valid_min", "valid_max", "valid_range"):
         match dtype:
             case "i1":
@@ -72,8 +78,5 @@ def adjust_attr(dtype: str, attr_key: str, attr_val: np.generic) -> np.generic:
                 res = attr_val
 
         return res
-
-    if attr_key == "flag_values":
-        return np.array(attr_val, dtype="u1")
 
     return attr_val
