@@ -3,7 +3,7 @@
 #
 #     https://github.com/rmvanhees/pyxarr.git
 #
-# Copyright (c) 2025 - R.M. van Hees (SRON)
+# Copyright (c) 2025-2026 - R.M. van Hees (SRON)
 #    All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,6 +49,9 @@ def adjust_attr(dtype: str, attr_key: str, attr_val: np.generic) -> np.generic:
 
     if attr_key == "flag_masks":
         return np.array(attr_val, dtype=dtype)
+
+    if attr_key == "scale_factor" and isinstance(attr_val, str):
+        return eval(attr_val)
 
     if attr_key in ("valid_min", "valid_max", "valid_range"):
         match dtype:
