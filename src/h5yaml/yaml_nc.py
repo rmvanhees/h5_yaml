@@ -193,8 +193,10 @@ class NcYaml:
             var_name = pkey.name if pkey.is_absolute() else key
 
             if val["_dtype"] in fid.cmptypes:
-                ds_dtype = fid.cmptypes[val["_dtype"]].dtype
+                is_compound = True
+                ds_dtype = fid.cmptypes[val["_dtype"]]
             else:
+                is_compound = False
                 ds_dtype = val["_dtype"]
 
             fillvalue = None
@@ -207,17 +209,18 @@ class NcYaml:
             if val["_dims"][0] == "scalar":
                 dset = var_grp.createVariable(
                     var_name,
-                    val["_dtype"],
+                    ds_dtype,
                     fill_value=fillvalue,
                     contiguous=True,
                 )
-                dset.setncatts(
-                    {
-                        k: adjust_attr(val["_dtype"], k, v)
-                        for k, v in val.items()
-                        if not k.startswith("_")
-                    }
-                )
+                if not is_compound:
+                    dset.setncatts(
+                        {
+                            k: adjust_attr(ds_dtype, k, v)
+                            for k, v in val.items()
+                            if not k.startswith("_")
+                        }
+                    )
                 continue
 
             compression = None
@@ -251,14 +254,11 @@ class NcYaml:
                     "you can not create a contiguous dataset with unlimited dimensions."
                 )
 
-            if val["_dtype"] in fid.cmptypes:
-                val["_dtype"] = fid.cmptypes[val["_dtype"]]
-
             # create the variable
             if val.get("_chunks") == "contiguous":
                 dset = var_grp.createVariable(
                     var_name,
-                    val["_dtype"],
+                    ds_dtype,
                     dimensions=var_dims,
                     fill_value=fillvalue,
                     contiguous=True,
@@ -268,14 +268,14 @@ class NcYaml:
                 if ds_chunk is not None and not isinstance(ds_chunk, bool):
                     ds_chunk = tuple(ds_chunk)
                 if val.get("_vlen"):
-                    if val["_dtype"] in fid.cmptypes:
+                    if is_compound:
                         raise ValueError("can not have vlen with compounds")
-                    val["_dtype"] = fid.createVLType(ds_dtype, val["_dtype"])
+                    ds_dtype = fid.createVLType(ds_dtype, "phony_vlen")
                     fillvalue = None
 
                 dset = var_grp.createVariable(
                     var_name,
-                    str if val["_dtype"] == "str" else val["_dtype"],
+                    str if val["_dtype"] == "str" else ds_dtype,
                     dimensions=var_dims,
                     fill_value=fillvalue,
                     compression=compression,
@@ -283,15 +283,16 @@ class NcYaml:
                     chunksizes=ds_chunk,
                     contiguous=False,
                 )
-            dset.setncatts(
-                {
-                    k: adjust_attr(val["_dtype"], k, v)
-                    for k, v in val.items()
-                    if not k.startswith("_")
-                }
-            )
+            if not is_compound:
+                dset.setncatts(
+                    {
+                        k: adjust_attr(val["_dtype"], k, v)
+                        for k, v in val.items()
+                        if not k.startswith("_")
+                    }
+                )
 
-            if val["_dtype"] in self._nc_def["compounds"]:
+            if is_compound:
                 compound = self._nc_def["compounds"][val["_dtype"]]
                 res = [v[2] for k, v in compound.items() if len(v) == 3]
                 if res:
@@ -305,9 +306,9 @@ class NcYaml:
         """Return definition of the netCDF4 product."""
         return self._nc_def
 
-    def diskless(self: NcYaml) -> Dataset:
+    def diskless(self: NcYaml, persist: bool = False) -> Dataset:
         """Create a netCDF4 file in memory."""
-        fid = Dataset("diskless_test.nc", "w", diskless=True, persistent=False)
+        fid = Dataset("diskless_test.nc", "w", diskless=True, persist=persist)
         self.__groups(fid)
         self.__dimensions(fid)
         self.__compounds(fid)

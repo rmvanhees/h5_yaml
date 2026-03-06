@@ -33,6 +33,8 @@ import numpy as np
 from .conf_from_yaml import conf_from_yaml
 from .lib.adjust_attr import adjust_attr
 
+H5_LIBVER = ("v110", "latest")
+
 
 # - class definition -----------------------------------
 class H5Yaml:
@@ -96,7 +98,8 @@ class H5Yaml:
 
         """
         for key in self._h5_def["groups"]:
-            _ = fid.require_group(key)
+            if key not in fid:
+                _ = fid.create_group(key, track_order=True)
 
     def __dimensions(self: H5Yaml, fid: h5py.File) -> None:
         """Add dimensions to HDF5 product.
@@ -168,9 +171,11 @@ class H5Yaml:
 
         """
         for key, val in self._h5_def["variables"].items():
-            if val["_dtype"] in fid:
-                ds_dtype = fid[val["_dtype"]]
+            if val["_dtype"] in fid:  # True when compound-dtype
+                is_compound = True
+                ds_dtype = fid[val["_dtype"]].dtype
             else:
+                is_compound = False
                 ds_dtype = "T" if val["_dtype"] == "str" else val["_dtype"]
 
             fillvalue = None
@@ -181,14 +186,13 @@ class H5Yaml:
 
             # check for scalar dataset
             if val["_dims"][0] == "scalar":
-                dset = fid.create_dataset(
-                    key,
-                    (),
-                    dtype=ds_dtype,
-                    fillvalue=fillvalue,
-                )
-                for attr, attr_val in val.items():
-                    if not attr.startswith("_"):
+                dset = fid.create_dataset(key, (), dtype=ds_dtype, fillvalue=fillvalue)
+                if is_compound:
+                    pass
+                else:
+                    for attr, attr_val in val.items():
+                        if attr.startswith("_"):
+                            continue
                         dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
                 continue
 
@@ -260,7 +264,7 @@ class H5Yaml:
                 if not attr.startswith("_"):
                     dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
 
-            if val["_dtype"] in self._h5_def["compounds"]:
+            if is_compound:
                 compound = self._h5_def["compounds"][val["_dtype"]]
                 res = [v[2] for k, v in compound.items() if len(v) == 3]
                 if res:
@@ -276,7 +280,7 @@ class H5Yaml:
 
     def diskless(self: H5Yaml) -> h5py.File:
         """Create a HDF5/netCDF4 file in memory."""
-        fid = h5py.File.in_memory()
+        fid = h5py.File.in_memory(track_order=True, libver=H5_LIBVER)
         self.__groups(fid)
         self.__dimensions(fid)
         self.__compounds(fid)
@@ -294,7 +298,7 @@ class H5Yaml:
 
         """
         try:
-            with h5py.File(l1a_name, "w") as fid:
+            with h5py.File(l1a_name, "w", track_order=True, libver=H5_LIBVER) as fid:
                 self.__groups(fid)
                 self.__dimensions(fid)
                 self.__compounds(fid)
