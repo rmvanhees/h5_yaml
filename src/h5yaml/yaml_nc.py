@@ -3,7 +3,7 @@
 #
 #     https://github.com/rmvanhees/pyxarr.git
 #
-# Copyright (c) 2025 - R.M. van Hees (SRON)
+# Copyright (c) 2025-2026 - R.M. van Hees (SRON)
 #    All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -296,10 +296,10 @@ class NcYaml:
                 compound = self._nc_def["compounds"][val["_dtype"]]
                 res = [v[2] for k, v in compound.items() if len(v) == 3]
                 if res:
-                    dset.attrs["units"] = [v[1] for k, v in compound.items()]
-                    dset.attrs["long_name"] = res
+                    dset.units = [v[1] for k, v in compound.items()]
+                    dset.long_name = res
                 else:
-                    dset.attrs["long_name"] = [v[1] for k, v in compound.items()]
+                    dset.long_name = [v[1] for k, v in compound.items()]
 
     @property
     def nc_def(self: NcYaml) -> dict:
