@@ -283,14 +283,13 @@ class NcYaml:
                     chunksizes=ds_chunk,
                     contiguous=False,
                 )
-            if not is_compound:
-                dset.setncatts(
-                    {
-                        k: adjust_attr(val["_dtype"], k, v)
-                        for k, v in val.items()
-                        if not k.startswith("_")
-                    }
-                )
+            dset.setncatts(
+                {
+                    k: adjust_attr(val["_dtype"], k, v)
+                    for k, v in val.items()
+                    if not k.startswith("_")
+                }
+            )
 
             if is_compound:
                 compound = self._nc_def["compounds"][val["_dtype"]]
