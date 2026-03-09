@@ -170,6 +170,16 @@ class H5Yaml:
            HDF5 file pointer (mode 'r+')
 
         """
+
+        def add_compound_attr() -> None:
+            compound = self._h5_def["compounds"][val["_dtype"]]
+            res = [v[2] for k, v in compound.items() if len(v) == 3]
+            if res:
+                dset.attrs["units"] = [v[1] for k, v in compound.items()]
+                dset.attrs["names"] = res
+            else:
+                dset.attrs["names"] = [v[1] for k, v in compound.items()]
+
         for key, val in self._h5_def["variables"].items():
             if val["_dtype"] in fid:  # True when compound-dtype
                 is_compound = True
@@ -187,13 +197,13 @@ class H5Yaml:
             # check for scalar dataset
             if val["_dims"][0] == "scalar":
                 dset = fid.create_dataset(key, (), dtype=ds_dtype, fillvalue=fillvalue)
+                for attr, attr_val in val.items():
+                    if attr.startswith("_"):
+                        continue
+                    dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
+
                 if is_compound:
-                    pass
-                else:
-                    for attr, attr_val in val.items():
-                        if attr.startswith("_"):
-                            continue
-                        dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
+                    add_compound_attr()
                 continue
 
             n_udim = 0
@@ -265,13 +275,7 @@ class H5Yaml:
                     dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
 
             if is_compound:
-                compound = self._h5_def["compounds"][val["_dtype"]]
-                res = [v[2] for k, v in compound.items() if len(v) == 3]
-                if res:
-                    dset.attrs["units"] = [v[1] for k, v in compound.items()]
-                    dset.attrs["long_name"] = res
-                else:
-                    dset.attrs["long_name"] = [v[1] for k, v in compound.items()]
+                add_compound_attr()
 
     @property
     def h5_def(self: H5Yaml) -> dict:

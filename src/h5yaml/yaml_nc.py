@@ -187,6 +187,16 @@ class NcYaml:
            netCDF4 Dataset (mode 'r+')
 
         """
+
+        def add_compound_attr() -> None:
+            compound = self._nc_def["compounds"][val["_dtype"]]
+            res = [v[2] for k, v in compound.items() if len(v) == 3]
+            if res:
+                dset.units = [v[1] for k, v in compound.items()]
+                dset.names = res
+            else:
+                dset.names = [v[1] for k, v in compound.items()]
+
         for key, val in self.nc_def["variables"].items():
             pkey = PurePosixPath(key)
             var_grp = fid[pkey.parent] if pkey.is_absolute() else fid
@@ -213,14 +223,15 @@ class NcYaml:
                     fill_value=fillvalue,
                     contiguous=True,
                 )
-                if not is_compound:
-                    dset.setncatts(
-                        {
-                            k: adjust_attr(ds_dtype, k, v)
-                            for k, v in val.items()
-                            if not k.startswith("_")
-                        }
-                    )
+                dset.setncatts(
+                    {
+                        k: adjust_attr(ds_dtype, k, v)
+                        for k, v in val.items()
+                        if not k.startswith("_")
+                    }
+                )
+                if is_compound:
+                    add_compound_attr()
                 continue
 
             compression = None
@@ -290,15 +301,8 @@ class NcYaml:
                     if not k.startswith("_")
                 }
             )
-
             if is_compound:
-                compound = self._nc_def["compounds"][val["_dtype"]]
-                res = [v[2] for k, v in compound.items() if len(v) == 3]
-                if res:
-                    dset.units = [v[1] for k, v in compound.items()]
-                    dset.long_name = res
-                else:
-                    dset.long_name = [v[1] for k, v in compound.items()]
+                add_compound_attr()
 
     @property
     def nc_def(self: NcYaml) -> dict:
