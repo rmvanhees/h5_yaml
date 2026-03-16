@@ -18,11 +18,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Create netCDF4 formatted file from a YAML configuration file using netCDF4."""
+"""Initialize empty netCDF4 file using Python package `netCDF4`."""
 
 from __future__ import annotations
 
-__all__ = ["NcYaml"]
+__all__ = ["NcCreate"]
 
 import logging
 from pathlib import Path, PurePosixPath
@@ -32,46 +32,43 @@ import numpy as np
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
-from .conf_from_yaml import conf_from_yaml
 from .lib.adjust_attr import adjust_attr
 
 
 # - class definition -----------------------------------
-class NcYaml:
-    """Class to create a netCDF4 formated file from a YAML configuration file.
+class NcCreate:
+    """Class to create an empty netCDF4 file using Python package `netCDF4`.
 
     Parameters
     ----------
-    nc_yaml_fl :  Path | str | list[Path | str]
-       YAML files with the netCDF4 format definition
+    groups: set | None = None
+    compounds: dict | None = None
+    dimensions: dict | None = None
+    variables: dict | None = None
+    attrs_global: dict | None = None
+    attrs_groups: dict | None = None
 
     """
 
-    def __init__(self: NcYaml, nc_yaml_fl: Path | str | list[Path | str]) -> None:
-        """Construct a NcYaml instance."""
-        self.logger = logging.getLogger("h5yaml.NcYaml")
-        self._nc_def = {
-            "groups": set(),
-            "attrs_global": {},
-            "attrs_groups": {},
-            "compounds": {},
-            "dimensions": {},
-            "variables": {},
-        }
+    def __init__(
+        self: NcCreate,
+        groups: set | None = None,
+        compounds: dict | None = None,
+        dimensions: dict | None = None,
+        variables: dict | None = None,
+        attrs_global: dict | None = None,
+        attrs_groups: dict | None = None,
+    ) -> None:
+        """Construct a NcCreate instance."""
+        self.logger = logging.getLogger("h5yaml.NcCreate")
+        self.groups = set() if groups is None else groups
+        self.compounds = {} if compounds is None else compounds
+        self.dimensions = {} if dimensions is None else dimensions
+        self.variables = {} if variables is None else variables
+        self.attrs_global = {} if attrs_global is None else attrs_global
+        self.attrs_groups = {} if attrs_groups is None else attrs_groups
 
-        for yaml_fl in nc_yaml_fl if isinstance(nc_yaml_fl, list) else [nc_yaml_fl]:
-            try:
-                config = conf_from_yaml(yaml_fl)
-            except RuntimeError as exc:
-                raise RuntimeError from exc
-
-            for key in self._nc_def:
-                if key in config:
-                    self._nc_def[key] |= (
-                        set(config[key]) if key == "groups" else config[key]
-                    )
-
-    def __attrs(self: NcYaml, fid: Dataset) -> None:
+    def __attrs(self: NcCreate, fid: Dataset) -> None:
         """Create global and group attributes.
 
         Parameters
@@ -80,7 +77,7 @@ class NcYaml:
            netCDF4 Dataset (mode 'r+')
 
         """
-        for key, val in self.nc_def["attrs_global"].items():
+        for key, val in self.attrs_global.items():
             if val == "TBW":
                 continue
 
@@ -89,16 +86,7 @@ class NcYaml:
             else:
                 fid.setncattr(key, val)
 
-        for key, val in self.nc_def["attrs_groups"].items():
-            if val == "TBW":
-                continue
-
-            if isinstance(val, str):
-                fid[str(Path(key).parent)].setncattr_string(Path(key).name, val)
-            else:
-                fid[str(Path(key).parent)].setncattr(Path(key).name, val)
-
-    def __groups(self: NcYaml, fid: Dataset) -> None:
+    def __groups(self: NcCreate, fid: Dataset) -> None:
         """Create groups in a netCDF4 product.
 
         Parameters
@@ -107,10 +95,19 @@ class NcYaml:
            netCDF4 Dataset (mode 'r+')
 
         """
-        for key in self.nc_def["groups"]:
+        for key in self.groups:
             _ = fid.createGroup(key)
 
-    def __dimensions(self: NcYaml, fid: Dataset) -> None:
+        for key, val in self.attrs_groups.items():
+            if val == "TBW":
+                continue
+
+            if isinstance(val, str):
+                fid[str(Path(key).parent)].setncattr_string(Path(key).name, val)
+            else:
+                fid[str(Path(key).parent)].setncattr(Path(key).name, val)
+
+    def __dimensions(self: NcCreate, fid: Dataset) -> None:
         """Add dimensions to a netCDF4 product.
 
         Parameters
@@ -119,7 +116,7 @@ class NcYaml:
            netCDF4 Dataset (mode 'r+')
 
         """
-        for key, value in self.nc_def["dimensions"].items():
+        for key, value in self.dimensions.items():
             pkey = PurePosixPath(key)
             if pkey.is_absolute():
                 _ = fid[pkey.parent].createDimension(pkey.name, value["_size"])
@@ -165,7 +162,7 @@ class NcYaml:
                 }
             )
 
-    def __compounds(self: NcYaml, fid: Dataset) -> None:
+    def __compounds(self: NcCreate, fid: Dataset) -> None:
         """Add compound datatypes to a netCDF4 product.
 
         Parameters
@@ -174,11 +171,11 @@ class NcYaml:
            netCDF4 Dataset (mode 'r+')
 
         """
-        for key, val in self.nc_def["compounds"].items():
+        for key, val in self.compounds.items():
             comp_t = np.dtype([(k, v[0]) for k, v in val.items()])
             _ = fid.createCompoundType(comp_t, key)
 
-    def __variables(self: NcYaml, fid: Dataset) -> None:
+    def __variables(self: NcCreate, fid: Dataset) -> None:
         """Add datasets to a netCDF4 product.
 
         Parameters
@@ -189,7 +186,7 @@ class NcYaml:
         """
 
         def add_compound_attr() -> None:
-            compound = self._nc_def["compounds"][val["_dtype"]]
+            compound = self.compounds[val["_dtype"]]
             res = [v[2] for k, v in compound.items() if len(v) == 3]
             if res:
                 dset.units = [v[1] for k, v in compound.items()]
@@ -197,7 +194,7 @@ class NcYaml:
             else:
                 dset.names = [v[1] for k, v in compound.items()]
 
-        for key, val in self.nc_def["variables"].items():
+        for key, val in self.variables.items():
             pkey = PurePosixPath(key)
             var_grp = fid[pkey.parent] if pkey.is_absolute() else fid
             var_name = pkey.name if pkey.is_absolute() else key
@@ -276,8 +273,8 @@ class NcYaml:
                 )
             else:
                 ds_chunk = val.get("_chunks")
-                if ds_chunk is not None and not isinstance(ds_chunk, bool):
-                    ds_chunk = tuple(ds_chunk)
+                if ds_chunk is not None:
+                    ds_chunk = None if isinstance(ds_chunk, bool) else tuple(ds_chunk)
                 if val.get("_vlen"):
                     if is_compound:
                         raise ValueError("can not have vlen with compounds")
@@ -304,12 +301,7 @@ class NcYaml:
             if is_compound:
                 add_compound_attr()
 
-    @property
-    def nc_def(self: NcYaml) -> dict:
-        """Return definition of the netCDF4 product."""
-        return self._nc_def
-
-    def diskless(self: NcYaml, persist: bool = False) -> Dataset:
+    def diskless(self: NcCreate, persist: bool = False) -> Dataset:
         """Create a netCDF4 file in memory."""
         fid = Dataset("diskless_test.nc", "w", diskless=True, persist=persist)
         self.__groups(fid)
@@ -319,7 +311,7 @@ class NcYaml:
         self.__attrs(fid)
         return fid
 
-    def create(self: NcYaml, l1a_name: Path | str) -> None:
+    def create(self: NcCreate, l1a_name: Path | str) -> None:
         """Create a netCDF4 file (overwrite if exist).
 
         Parameters
