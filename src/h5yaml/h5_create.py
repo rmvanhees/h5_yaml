@@ -273,7 +273,7 @@ class H5Create:
             if is_compound:
                 add_compound_attr()
 
-    def diskless(self: H5Create) -> h5py.File:
+    def diskless(self: H5Create, _persist: bool) -> h5py.File:
         """Create a HDF5/netCDF4 file in memory."""
         fid = h5py.File.in_memory(track_order=True, libver=H5_LIBVER)
         self.__groups(fid)

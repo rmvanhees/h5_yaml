@@ -301,7 +301,7 @@ class NcCreate:
             if is_compound:
                 add_compound_attr()
 
-    def diskless(self: NcCreate, persist: bool = False) -> Dataset:
+    def diskless(self: NcCreate, persist: bool) -> Dataset:
         """Create a netCDF4 file in memory."""
         fid = Dataset("diskless_test.nc", "w", diskless=True, persist=persist)
         self.__groups(fid)

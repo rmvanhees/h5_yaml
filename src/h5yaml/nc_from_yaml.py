@@ -107,11 +107,11 @@ class NcFromYaml:
         """Return definition of the HDF5/netCDF4 product."""
         return self._nc_def
 
-    def diskless(self: NcFromYaml, module: str = "h5py") -> None:
+    def diskless(self: NcFromYaml, module: str = "h5py", persist: bool = False) -> None:
         """Create a HDF5/netCDF4 file in memory."""
         fid = H5Create(**self._nc_def) if module == "h5py" else NcCreate(**self._nc_def)
 
-        return fid.diskless()
+        return fid.diskless(persist)
 
     def create(self: NcFromYaml, name: str | Path, module: str = "h5py") -> None:
         """Create a netCDF4 file (overwrite if exist).
