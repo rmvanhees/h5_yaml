@@ -8,7 +8,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "h5yaml"
-description = "Use YAML configuration file to generate HDF5/netCDF4 formated files."
+description = "Generate and design netCDF4 files using a YAML configuration file."
 readme = "README.md"
 authors = [
   {name = "Richard van Hees", email = "r.m.van.hees@sron.nl"}

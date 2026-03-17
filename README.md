@@ -5,13 +5,27 @@
 [![image](https://img.shields.io/pypi/status/h5yaml.svg?label=status)](https://pypi.org/project/h5yaml/)
 
 ## Description
-This package let you generate [HDF5](https://docs.h5py.org/en/stable/)/[netCDF4](https://unidata.github.io/netcdf4-python/)
-formatted files as defined in a [YAML](https://yaml.org/) configuration file. This has several advantages: 
+This package let you design the layout of [HDF5](https://docs.h5py.org/en/stable/)/[netCDF4](https://unidata.github.io/netcdf4-python/) files.
+The layout of the file is defined by its structure *Groups*, datasets *Variables*
+including their data-type (numpy dtype of *Compounds*), *Dimensions* and *Coordinates*,
+and the meta data of the file and datasets *Attributes*.
+An empty netCDF4 file can be generated from a Python dictionary, which you can easily
+construct in a [YAML](https://yaml.org/) file. But alternatively you could also use
+JSON or XML.
+In the design phase, you can ask feedback from colleagues or check if the netCDF4
+product ... with the CF conventions. Then finally, you can implement the file-structure
+in JAVA, C++ or Fortran. But of course you can also simply generate the empty products
+and fill the dataset using Python.
 
- * you define the layout of your HDF5/netCDF4 file using YAML which is human-readable and has intuitive syntax.
- * you can reuse the YAML configuration file to to have all your product have a consistent layout.
- * you can make updates by only changing the YAML configuration file
- * you can have the layout of your HDF5/netCDF4 file as a python dictionary, thus without accessing any HDF5/netCDF4 file
+In short, this approach has the following advantages:
+
+ * you define the layout of your HDF5/netCDF4 file using YAML which is human-readable
+ and has intuitive syntax.
+ * you can reuse the YAML configuration file to to have all your product have a
+ consistent layout.
+ * you can make updates by only changing the YAML configuration file.
+ * you can have the layout of your HDF5/netCDF4 file as a Python dictionary, thus
+ without accessing any HDF5/netCDF4 file.
 
 The `H5YAML` package has two classes to generate a HDF5/netCDF4 formatted file.
 
