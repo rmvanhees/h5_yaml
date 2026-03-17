@@ -6,16 +6,22 @@
 
 ## Description
 This package let you design the layout of [HDF5](https://docs.h5py.org/en/stable/)/[netCDF4](https://unidata.github.io/netcdf4-python/) files.
-The layout of the file is defined by its structure *Groups*, datasets *Variables*
-including their data-type (numpy dtype of *Compounds*), *Dimensions* and *Coordinates*,
-and the meta data of the file and datasets *Attributes*.
-An empty netCDF4 file can be generated from a Python dictionary, which you can easily
-construct in a [YAML](https://yaml.org/) file. But alternatively you could also use
-JSON or XML.
-In the design phase, you can ask feedback from colleagues or check if the netCDF4
-product ... with the CF conventions. Then finally, you can implement the file-structure
-in JAVA, C++ or Fortran. But of course you can also simply generate the empty products
-and fill the dataset using Python.
+The layout of a netCDF4 file is defined by its *Groups* (defining the structure), *Dimensions*,
+*Variables* (its dataset) and *Attributes* (its metadata) for both file and variables. 
+As of version 0.4, you can create netCDF4 files based on a Python dictionary.
+This dictionary can be constructed from a [YAML](https://yaml.org/) file.
+But alternatively you could also use [JSON](https://json.org) or even XML
+(these may be added to future releases of `h5yaml`).
+
+In the design phase, you can quickly generate very small netCDF4 files, because the variables
+are still empty. These products can be shared among colleagues for review or perform a 
+metadata compliance check with the [CF conventions](https://cfconventions.org/)
+of the [ACDD](https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3)
+
+ * https://mcc.podaac.earthdatacloud.nasa.gov
+
+And finally, you can implement the file-structure in JAVA, C++ or Fortran.
+But of course you can also simply generate the empty products and fill the dataset using Python.
 
 In short, this approach has the following advantages:
 
@@ -27,20 +33,15 @@ In short, this approach has the following advantages:
  * you can have the layout of your HDF5/netCDF4 file as a Python dictionary, thus
  without accessing any HDF5/netCDF4 file.
 
-The `H5YAML` package has two classes to generate a HDF5/netCDF4 formatted file.
+The `H5YAML` package provides the classes `H5Create` and `NcCreate` to generate a HDF5/netCDF4 formatted file from a Python dictionary.
 
- 1. The class `H5Yaml` uses the [h5py](https://pypi.org/project/h5py/) package, which is a Pythonic interface to
-    the HDF5 binary data format.
-    Let 'h5_def.yaml' be your YAML configuration file then ```H5Yaml("h5_def.yaml").create("foo.h5")``` will create
-	the HDF5 file 'foo.h5'. This can be read by netCDF4 software, because it uses dimension-scales to each dataset.
- 2. The class `NcYaml` uses the [netCDF4](https://pypi.org/project/netCDF4/) package, which provides an object-oriented
-    python interface to the netCDF version 4 library.
-    Let 'nc_def.yaml' be your YAML configuration file then ```NcYaml("nc_def.yaml").create("foo.nc")``` will create
-	the netCDF4/HDF5 file 'foo.nc'
-
-The class `NcYaml` must be used when strict conformance to the netCDF4 format is required.
-However, package `netCDF4` has some limitations, which `h5py` has not, for example it does
-not allow variable-length variables to have a compound data-type.
+ 1. The class `H5Create` uses the [h5py](https://pypi.org/project/h5py/) package, which is a Pythonic interface to
+    the HDF5 binary data format. The generated HDF5 file should be compatible with the netCDF4 format.
+    H5Create is faster than the netCDF4 implementation and generates smaller files.
+ 3. The class `NcCreate` uses the [netCDF4](https://pypi.org/project/netCDF4/) package, which provides an object-oriented
+    python interface to the netCDF version 4 library. You should use this class when strict conformance with the netCDF4 format
+    is required. However, package `netCDF4` has some limitations, which `h5py` has not, for example it does
+    not allow variable-length variables to have a compound data-type.
 
 ## Installation
 The package `h5yaml` is available from PyPI. To install it use `pip`:
@@ -63,10 +64,10 @@ The YAML file should be structured as follows:
 
  * The top level are: 'groups', 'dimensions', 'compounds', 'variables', 'attrs\_global' and 'attrs\_groups'.
  * > 'attrs\_global' and 'attrs\_groups' are added in version 0.3.0
- * The names of the attributes, groups, dimensions, compounds and viariable should be specified as PosixPaths, however:
-   * The names of groups should never start with a slash (always erlative to root);
+ * The names of the attributes, groups, dimensions, compounds and variable should be specified as PosixPaths, however:
+   * The names of groups should never start with a slash (always relative to root);
    * All other elements which are stored in root should also not start with a slash;
-   * But these elements require a starting slash (absolute paths) when they are stored not the root. 
+   * Hoewever the non-group elements require a starting slash (absolute paths) when they are stored not the root. 
  * The section 'groups' are optional, but you should provide each group you want to use
    in your file. The 'groups' section in the YAML file may look like this:
    ```
@@ -170,7 +171,8 @@ The YAML file should be structured as follows:
 
 ### Notes and ToDo
 
-* The layout of a HDF5 or netCDF4 file can be complex. From version 0.3.0, you can split the file definition over several YAML files and provide a list with the names of YAML files as input to H5Yaml and NcYaml.  
+* The layout of a HDF5 or netCDF4 file can be complex. From version 0.3, you can split the file definition over several YAML files and provide a list with the names of YAML files as input to H5Yaml and NcYaml.
+* From version 0.4, the classes `H5Yaml` and `NcYaml` are replaced by `NcFromYaml`. You can use module `h5py` to write the netCDF4 file or `netCDF4` using the keyword 'module'. Then the classes `H5Create` or `NcCreate` perform the `dict` to netCDF4 conversion.
 
 ## Support [TBW]
 
