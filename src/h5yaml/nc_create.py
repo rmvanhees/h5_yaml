@@ -301,9 +301,28 @@ class NcCreate:
             if is_compound:
                 add_compound_attr()
 
-    def diskless(self: NcCreate, persist: bool) -> Dataset:
+    def create(self: NcCreate, filename: Path | str) -> None:
+        """Create a netCDF4 file (overwrite if exist).
+
+        Parameters
+        ----------
+        filename :  Path | str
+           Name of the file on disk, or file-like object
+
+        """
+        try:
+            with Dataset(filename, "w") as fid:
+                self.__groups(fid)
+                self.__dimensions(fid)
+                self.__compounds(fid)
+                self.__variables(fid)
+                self.__attrs(fid)
+        except PermissionError as exc:
+            raise RuntimeError(f"failed to create {filename}") from exc
+
+    def diskless(self: NcCreate) -> Dataset:
         """Create a netCDF4 file in memory."""
-        fid = Dataset("diskless_test.nc", "w", diskless=True, persist=persist)
+        fid = Dataset("diskless.nc", "w", memory=2**30)
         self.__groups(fid)
         self.__dimensions(fid)
         self.__compounds(fid)
@@ -311,21 +330,19 @@ class NcCreate:
         self.__attrs(fid)
         return fid
 
-    def create(self: NcCreate, l1a_name: Path | str) -> None:
-        """Create a netCDF4 file (overwrite if exist).
+    def to_disk(self: NcCreate, fid: Dataset, filename: Path | str) -> None:
+        """Write in-memory buffer to file, and close the Dataset.
 
         Parameters
         ----------
-        l1a_name :  Path | str
-           Full name of the netCDF4 file to be generated
+        fid :  Dataset
+           Dataset pointer returned by method `diskless`
+        filename :  Path | str
+           Name of the file on disk, or file-like object
 
         """
         try:
-            with Dataset(l1a_name, "w") as fid:
-                self.__groups(fid)
-                self.__dimensions(fid)
-                self.__compounds(fid)
-                self.__variables(fid)
-                self.__attrs(fid)
+            with open(filename, "wb") as ff:
+                _ = ff.write(fid.close())
         except PermissionError as exc:
-            raise RuntimeError(f"failed to create {l1a_name}") from exc
+            raise RuntimeError(f"failed create {filename}") from exc
