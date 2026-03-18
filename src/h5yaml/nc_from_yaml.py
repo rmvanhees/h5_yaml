@@ -24,7 +24,8 @@ from __future__ import annotations
 
 __all__ = ["NcFromYaml"]
 
-import logging
+# import logging
+import pprint
 from pathlib import Path
 
 import yaml
@@ -64,7 +65,7 @@ def _from_yaml(file_path: Path | str) -> dict:
 
 
 # - class definition -----------------------------------
-class NcFromYaml:
+class NcFromYaml(H5Create):
     """Class to create a netCDF4 formated file from a YAML configuration file.
 
     Parameters
@@ -74,17 +75,14 @@ class NcFromYaml:
 
     """
 
-    def __init__(self: NcFromYaml, nc_yaml_fl: Path | str | list[Path | str]) -> None:
+    def __init__(
+        self: NcFromYaml,
+        nc_yaml_fl: Path | str | list[Path | str],
+    ) -> None:
         """Construct a NcFromYaml instance."""
-        self.logger = logging.getLogger("h5yaml.NcFromYaml")
-        self._nc_def = {
-            "groups": None,
-            "attrs_global": None,
-            "attrs_groups": None,
-            "compounds": None,
-            "dimensions": None,
-            "variables": None,
-        }
+        # self.logger = logging.getLogger("h5yaml.NcFromYaml")
+        self.module = "h5py"
+        super().__init__()
 
         for yaml_fl in nc_yaml_fl if isinstance(nc_yaml_fl, list) else [nc_yaml_fl]:
             try:
@@ -92,38 +90,49 @@ class NcFromYaml:
             except RuntimeError as exc:
                 raise RuntimeError from exc
 
-            for key, value in self._nc_def.items():
-                if key not in config:
-                    continue
+            if "groups" in config:
+                self.groups |= set(config["groups"])
+            if "compounds" in config:
+                self.compounds |= config["compounds"]
+            if "dimensions" in config:
+                self.dimensions |= config["dimensions"]
+            if "variables" in config:
+                self.variables |= config["variables"]
+            if "attrs_global" in config:
+                self.attrs_global |= config["attrs_global"]
+            if "attrs_groups" in config:
+                self.attrs_groups |= config["attrs_groups"]
 
-                if value is None:
-                    value = set() if key == "groups" else {}
-                self._nc_def[key] = (
-                    value | set(config[key]) if key == "groups" else config[key]
-                )
+    def __repr__(self: NcFromYaml) -> str:
+        """Show object as dictionary."""
+        return pprint.pformat(self.asdict)
 
     @property
     def asdict(self: NcFromYaml) -> dict:
         """Return definition of the HDF5/netCDF4 product."""
-        return self._nc_def
+        return {
+            "groups": self.groups,
+            "dimensions": self.dimensions,
+            "compounds": self.compounds,
+            "variables": self.variables,
+            "attrs_global": self.attrs_global,
+            "attrs_groups": self.attrs_groups,
+        }
 
-    def diskless(self: NcFromYaml, module: str = "h5py", persist: bool = False) -> None:
-        """Create a HDF5/netCDF4 file in memory."""
-        fid = H5Create(**self._nc_def) if module == "h5py" else NcCreate(**self._nc_def)
+    @property
+    def use_netcdf4(self: NcFromYaml) -> None:
+        """Use module netCDF4 to generate the HDF5/netCDF4 file."""
+        if self.module == "netCDF4":
+            return
 
-        return fid.diskless(persist)
+        NcFromYaml.__bases__ = (NcCreate,)
+        self.module = "netCDF4"
 
-    def create(self: NcFromYaml, name: str | Path, module: str = "h5py") -> None:
-        """Create a netCDF4 file (overwrite if exist).
+    @property
+    def use_h5py(self: NcFromYaml) -> None:
+        """Use module h5py to generate the HDF5/netCDF4 file."""
+        if self.module == "h5py":
+            return
 
-        Parameters
-        ----------
-        name :  Path | str
-           Full name of the netCDF4 file to be generated
-        module :  {"h5py", "netCDF4"}, default="h5py"
-           Use this module to generate the netCDF4 file
-
-        """
-        fid = H5Create(**self._nc_def) if module == "h5py" else NcCreate(**self._nc_def)
-
-        fid.create(name)
+        NcFromYaml.__bases__ = (H5Create,)
+        self.module = "h5py"
