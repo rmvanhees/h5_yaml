@@ -273,7 +273,26 @@ class H5Create:
             if is_compound:
                 add_compound_attr()
 
-    def diskless(self: H5Create, _persist: bool) -> h5py.File:
+    def create(self: H5Create, filename: Path | str) -> None:
+        """Create a HDF5/netCDF4 file (overwrite if exist).
+
+        Parameters
+        ----------
+        filename :  Path | str
+           Full name of the HDF5/netCDF4 file to be generated
+
+        """
+        try:
+            with h5py.File(filename, "w", track_order=True, libver=H5_LIBVER) as fid:
+                self.__groups(fid)
+                self.__dimensions(fid)
+                self.__compounds(fid)
+                self.__variables(fid)
+                self.__attrs(fid)
+        except PermissionError as exc:
+            raise RuntimeError(f"failed create {filename}") from exc
+
+    def diskless(self: H5Create) -> h5py.File:
         """Create a HDF5/netCDF4 file in memory."""
         fid = h5py.File.in_memory(track_order=True, libver=H5_LIBVER)
         self.__groups(fid)
@@ -283,21 +302,20 @@ class H5Create:
         self.__attrs(fid)
         return fid
 
-    def create(self: H5Create, l1a_name: Path | str) -> None:
-        """Create a HDF5/netCDF4 file (overwrite if exist).
+    def to_disk(self: H5Create, fid: h5py.File, filename: Path | str) -> None:
+        """Write in-memory buffer to file.
 
         Parameters
         ----------
-        l1a_name :  Path | str
-           Full name of the HDF5/netCDF4 file to be generated
+        fid :  h5py.File
+           Dataset pointer returned by method `diskless`
+        filename :  Path | str
+           Name of the file on disk, or file-like object
 
         """
+        fid.flush()
         try:
-            with h5py.File(l1a_name, "w", track_order=True, libver=H5_LIBVER) as fid:
-                self.__groups(fid)
-                self.__dimensions(fid)
-                self.__compounds(fid)
-                self.__variables(fid)
-                self.__attrs(fid)
+            with open(filename, "wb") as ff:
+                _ = ff.write(fid.id.get_file_image())
         except PermissionError as exc:
-            raise RuntimeError(f"failed create {l1a_name}") from exc
+            raise RuntimeError(f"failed create {filename}") from exc
