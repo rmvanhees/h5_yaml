@@ -119,20 +119,20 @@ class NcFromYaml(H5Create):
             "attrs_groups": self.attrs_groups,
         }
 
-    @property
-    def use_netcdf4(self: NcFromYaml) -> None:
+    def use_netcdf4(self: NcFromYaml) -> NcFromYaml:
         """Use module netCDF4 to generate the HDF5/netCDF4 file."""
         if self.module == "netCDF4":
-            return
+            return self
 
         NcFromYaml.__bases__ = (NcCreate,)
         self.module = "netCDF4"
+        return self
 
-    @property
-    def use_h5py(self: NcFromYaml) -> None:
+    def use_h5py(self: NcFromYaml) -> NcFromYaml:
         """Use module h5py to generate the HDF5/netCDF4 file."""
         if self.module == "h5py":
-            return
+            return self
 
         NcFromYaml.__bases__ = (H5Create,)
         self.module = "h5py"
+        return self
