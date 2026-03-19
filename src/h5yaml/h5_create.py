@@ -155,7 +155,7 @@ class H5Create:
 
         """
         for key, val in self.compounds.items():
-            fid[key] = np.dtype([(k, v[0]) for k, v in val.items()])
+            fid[key] = np.dtype([(k, v[0]) for k, v in val.items()], align=True)
 
     def __variables(self: H5Create, fid: h5py.File) -> None:
         """Add datasets to HDF5 product.
