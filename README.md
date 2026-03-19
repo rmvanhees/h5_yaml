@@ -60,6 +60,38 @@ And reinstall `h5py` and `netCDF4` using the commands:
 
 ## Usage
 
+The class `NcFromYaml` can be used to generate netCDF4 files using the Python packages `h5py` (default) or `netCDF4`
+where a YAML file is used to define the layout of the netCDF4 file.
+```
+from importlib.resources import files
+
+from h5yaml.nc_from_yaml import NcFromYaml
+
+res = NcFromYaml(files("h5yaml.Data") / "nc_testing.yaml")
+# show the YAML configuration as a Python dictionary using pprint
+print(res)
+# generate an in-memory HDF5 file
+fid = res.diskless()
+# write data to datasets of the file
+# ...
+# write HDF5 file to disk
+res.to_disk(fid, filename)
+```
+In the next example, we use the Python package `netCDF4` and write the file directly to disk:
+```
+from importlib.resources import files
+
+from netCDF4 import Dataset
+
+from h5yaml.nc_from_yaml import NcFromYaml
+
+res = NcFromYaml(files("h5yaml.Data") / "nc_testing.yaml")
+# use package `netCDF4` and write the file to disk
+res.use_netcdf4().create(filename)
+with Dataset(filename, "r+") as fid
+  # write data to variables of the file
+```
+
 The YAML file should be structured as follows:
 
  * The top level are: 'groups', 'dimensions', 'compounds', 'variables', 'attrs\_global' and 'attrs\_groups'.
