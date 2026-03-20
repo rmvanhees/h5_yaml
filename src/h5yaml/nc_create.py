@@ -32,6 +32,7 @@ import numpy as np
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
+from . import __version__
 from .lib.adjust_attr import adjust_attr
 
 
@@ -67,6 +68,7 @@ class NcCreate:
         self.variables = {} if variables is None else variables
         self.attrs_global = {} if attrs_global is None else attrs_global
         self.attrs_groups = {} if attrs_groups is None else attrs_groups
+        self.str_as_bytes = False
 
     def __attrs(self: NcCreate, fid: Dataset) -> None:
         """Create global and group attributes.
@@ -77,6 +79,10 @@ class NcCreate:
            netCDF4 Dataset (mode 'r+')
 
         """
+        fid._NCCreator = (
+            f"h5yaml.{self.__class__.__name__}(NcCreate)"
+            f",version={__version__.split('+', maxsplit=1)[0]}"
+        )
         for key, val in self.attrs_global.items():
             if val == "TBW":
                 continue
@@ -129,7 +135,7 @@ class NcCreate:
             fillvalue = None
             if "_FillValue" in value:
                 fillvalue = (
-                    np.nan if value["_FillValue"] == "NaN" else int(value["_FillValue"])
+                    np.nan if value["_FillValue"] == "NaN" else value["_FillValue"]
                 )
 
             if pkey.is_absolute():

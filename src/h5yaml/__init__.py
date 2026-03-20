@@ -3,7 +3,7 @@
 #
 #     https://github.com/rmvanhees/h5_yaml.git
 #
-# Copyright (c) 2025 - R.M. van Hees (SRON)
+# Copyright (c) 2025-2026 - R.M. van Hees (SRON)
 #    All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,4 +18,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Necessary but empty file."""
+"""Define version of the software."""
+
+__all__ = ["__version__"]
+
+
+from ._version import __version__

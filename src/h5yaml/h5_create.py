@@ -30,9 +30,14 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from .lib.adjust_attr import adjust_attr
+from . import __version__
 
 H5_LIBVER = ("v110", "latest")
+
+
+def str2bytes(ss: str) -> np.bytes_:
+    """Convert Python string to ASCII encoded bytes."""
+    return np.array(ss, dtype=h5py.string_dtype("ascii", len(ss)))
 
 
 # - class definition -----------------------------------
@@ -47,6 +52,7 @@ class H5Create:
     variables: dict | None = None
     attrs_global: dict | None = None
     attrs_groups: dict | None = None
+    str_as_bytes: bool = False
 
     """
 
@@ -58,6 +64,7 @@ class H5Create:
         variables: dict | None = None,
         attrs_global: dict | None = None,
         attrs_groups: dict | None = None,
+        str_as_bytes: bool = False,
     ) -> None:
         """Construct a H5Create instance."""
         self.logger = logging.getLogger("h5yaml.H5Create")
@@ -67,6 +74,69 @@ class H5Create:
         self.variables = {} if variables is None else variables
         self.attrs_global = {} if attrs_global is None else attrs_global
         self.attrs_groups = {} if attrs_groups is None else attrs_groups
+        self.str_as_bytes = str_as_bytes
+
+    def _adjust_attr(
+        self: H5Create, dtype: str, attr_key: str, attr_val: np.generic
+    ) -> np.generic:
+        """Return attribute converted to the same data type as its variable.
+
+        Parameters
+        ----------
+        dtype :  str
+           numpy data-type of variable
+        attr_key :  str
+           name of the attribute
+        attr_val :  np.generic
+           original value of the attribute
+
+        Returns
+        -------
+        attr_val converted to dtype
+
+        """
+        if attr_key == "flag_values":
+            return np.array(attr_val, dtype=dtype)
+
+        if attr_key == "flag_masks":
+            return np.array(attr_val, dtype=dtype)
+
+        if attr_key == "scale_factor" and isinstance(attr_val, str):
+            return eval(attr_val)
+
+        if attr_key in ("valid_min", "valid_max", "valid_range"):
+            match dtype:
+                case "i1":
+                    res = np.int8(attr_val)
+                case "i2":
+                    res = np.int16(attr_val)
+                case "i4":
+                    res = np.int32(attr_val)
+                case "i8":
+                    res = np.int64(attr_val)
+                case "u1":
+                    res = np.uint8(attr_val)
+                case "u2":
+                    res = np.uint16(attr_val)
+                case "u4":
+                    res = np.uint32(attr_val)
+                case "u8":
+                    res = np.uint64(attr_val)
+                case "f2":
+                    res = np.float16(attr_val)
+                case "f4":
+                    res = np.float32(attr_val)
+                case "f8":
+                    res = np.float64(attr_val)
+                case _:
+                    res = attr_val
+
+            return res
+
+        if self.str_as_bytes and isinstance(attr_val, str):
+            return str2bytes(attr_val)
+
+        return attr_val
 
     def __attrs(self: H5Create, fid: h5py.File) -> None:
         """Create global and group attributes.
@@ -74,12 +144,19 @@ class H5Create:
         Parameters
         ----------
         fid :  h5py.File
-           HDF5 file pointer (mode 'r+')
+           HDF5 file pointer (mode 'w' or 'r+')
 
         """
+        fid.attrs["_NCCreator"] = str2bytes(
+            f"h5yaml.{self.__class__.__name__}(H5Create)"
+            f",version={__version__.split('+', maxsplit=1)[0]}"
+        )
+        fid.attrs["_NCProperties"] = str2bytes(
+            f"version=2,hdf5={h5py.version.hdf5_version}"
+        )
         for key, value in self.attrs_global.items():
             if key not in fid.attrs and value != "TBW":
-                fid.attrs[key] = value
+                fid.attrs[key] = str2bytes(value) if isinstance(value, str) else value
 
     def __groups(self: H5Create, fid: h5py.File) -> None:
         """Create groups in HDF5 product.
@@ -87,7 +164,7 @@ class H5Create:
         Parameters
         ----------
         fid :  h5py.File
-           HDF5 file pointer (mode 'r+')
+           HDF5 file pointer (mode 'w' or 'r+')
 
         """
         for key in self.groups:
@@ -95,7 +172,9 @@ class H5Create:
                 _ = fid.create_group(key, track_order=True)
         for key, value in self.attrs_groups.items():
             if key not in fid.attrs and value != "TBW":
-                fid[str(Path(key).parent)].attrs[Path(key).name] = value
+                fid[str(Path(key).parent)].attrs[Path(key).name] = (
+                    str2bytes(value) if isinstance(value, str) else value
+                )
 
     def __dimensions(self: H5Create, fid: h5py.File) -> None:
         """Add dimensions to HDF5 product.
@@ -103,25 +182,20 @@ class H5Create:
         Parameters
         ----------
         fid :  h5py.File
-         HDF5 file pointer (mode 'r+')
+         HDF5 file pointer (mode 'w' or 'r+')
 
         """
         for key, val in self.dimensions.items():
             fillvalue = None
             if "_FillValue" in val:
-                fillvalue = (
-                    np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
-                )
+                fillvalue = np.nan if val["_FillValue"] == "NaN" else val["_FillValue"]
 
             if val["_size"] == 0:
-                ds_chunk = val.get("_chunks")
-                if ds_chunk is not None and not isinstance(ds_chunk, bool):
-                    ds_chunk = tuple(ds_chunk)
                 dset = fid.create_dataset(
                     key,
                     shape=(0,),
                     dtype="T" if val["_dtype"] == "str" else val["_dtype"],
-                    chunks=ds_chunk,
+                    chunks=True,
                     maxshape=(None,),
                     fillvalue=fillvalue,
                 )
@@ -130,6 +204,7 @@ class H5Create:
                     key,
                     shape=(val["_size"],),
                     dtype="T" if val["_dtype"] == "str" else val["_dtype"],
+                    fillvalue=fillvalue,
                 )
                 if "_values" in val:
                     dset[:] = val["_values"]
@@ -141,9 +216,12 @@ class H5Create:
                 if "long_name" in val
                 else "This is a netCDF dimension but not a netCDF variable."
             )
+            if fillvalue is not None:
+                dset.attrs["_FillValue"] = dset.fillvalue
+
             for attr, attr_val in val.items():
                 if not attr.startswith("_"):
-                    dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
+                    dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
     def __compounds(self: H5Create, fid: h5py.File) -> None:
         """Add compound datatypes to HDF5 product.
@@ -151,7 +229,7 @@ class H5Create:
         Parameters
         ----------
         fid :  h5py.File
-           HDF5 file pointer (mode 'r+')
+           HDF5 file pointer (mode 'w' or 'r+')
 
         """
         for key, val in self.compounds.items():
@@ -163,7 +241,7 @@ class H5Create:
         Parameters
         ----------
         fid :  h5py.File
-           HDF5 file pointer (mode 'r+')
+           HDF5 file pointer (mode 'w' or 'r+')
 
         """
 
@@ -186,17 +264,17 @@ class H5Create:
 
             fillvalue = None
             if "_FillValue" in val:
-                fillvalue = (
-                    np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
-                )
+                fillvalue = np.nan if val["_FillValue"] == "NaN" else val["_FillValue"]
 
             # check for scalar dataset
             if val["_dims"][0] == "scalar":
                 dset = fid.create_dataset(key, (), dtype=ds_dtype, fillvalue=fillvalue)
+                if fillvalue is not None:
+                    dset.attrs["_FillValue"] = dset.fillvalue
                 for attr, attr_val in val.items():
                     if attr.startswith("_"):
                         continue
-                    dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
+                    dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
                 if is_compound:
                     add_compound_attr()
@@ -226,10 +304,11 @@ class H5Create:
                     key,
                     ds_shape,
                     dtype=ds_dtype,
-                    chunks=None,
                     maxshape=None,
                     fillvalue=fillvalue,
                 )
+                if fillvalue is not None:
+                    dset.attrs["_FillValue"] = dset.fillvalue
             else:
                 ds_chunk = val.get("_chunks")
                 if ds_chunk is not None and not isinstance(ds_chunk, bool):
@@ -262,13 +341,15 @@ class H5Create:
                     compression=compression,
                     shuffle=shuffle,
                 )
+                if fillvalue is not None:
+                    dset.attrs["_FillValue"] = dset.fillvalue
 
             for ii, coord in enumerate(val["_dims"]):
                 dset.dims[ii].attach_scale(fid[coord])
 
             for attr, attr_val in val.items():
                 if not attr.startswith("_"):
-                    dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
+                    dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
             if is_compound:
                 add_compound_attr()

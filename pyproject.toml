@@ -62,6 +62,10 @@ packages = ["src/h5yaml"]
 source = "versioningit"
 
 [tool.versioningit]
+default-version = "0.0"
+
+[tool.versioningit.write]
+file = "src/h5yaml/_version.py"
 
 [tool.versioningit.next-version]
 method = "smallest"

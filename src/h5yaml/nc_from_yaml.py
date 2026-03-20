@@ -42,6 +42,8 @@ def _from_yaml(file_path: Path | str) -> dict:
     ----------
     file_path :  Path | str
        full path of YAML file
+    str_as_bytes: bool, default=False
+       convert string to a netCDF4 compatable byte-array
 
     Returns
     -------
@@ -78,11 +80,13 @@ class NcFromYaml(H5Create):
     def __init__(
         self: NcFromYaml,
         nc_yaml_fl: Path | str | list[Path | str],
+        str_as_bytes: bool = False,
     ) -> None:
         """Construct a NcFromYaml instance."""
         # self.logger = logging.getLogger("h5yaml.NcFromYaml")
         self.module = "h5py"
         super().__init__()
+        self.str_as_bytes = str_as_bytes
 
         for yaml_fl in nc_yaml_fl if isinstance(nc_yaml_fl, list) else [nc_yaml_fl]:
             try:
