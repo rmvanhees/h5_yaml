@@ -42,8 +42,6 @@ def _from_yaml(file_path: Path | str) -> dict:
     ----------
     file_path :  Path | str
        full path of YAML file
-    str_as_bytes: bool, default=False
-       convert string to a netCDF4 compatable byte-array
 
     Returns
     -------
@@ -74,13 +72,15 @@ class NcFromYaml(H5Create):
     ----------
     nc_yaml_fl :  Path | str | list[Path | str]
        YAML files with the HDF5 format definition
+    str_as_bytes: bool, default=True
+       convert string to a netCDF4 compatable byte-array
 
     """
 
     def __init__(
         self: NcFromYaml,
         nc_yaml_fl: Path | str | list[Path | str],
-        str_as_bytes: bool = False,
+        str_as_bytes: bool = True,
     ) -> None:
         """Construct a NcFromYaml instance."""
         # self.logger = logging.getLogger("h5yaml.NcFromYaml")
