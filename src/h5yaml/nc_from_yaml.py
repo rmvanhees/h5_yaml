@@ -72,21 +72,17 @@ class NcFromYaml(H5Create):
     ----------
     nc_yaml_fl :  Path | str | list[Path | str]
        YAML files with the HDF5 format definition
-    str_as_bytes: bool, default=True
-       convert string to a netCDF4 compatable byte-array
 
     """
 
     def __init__(
         self: NcFromYaml,
         nc_yaml_fl: Path | str | list[Path | str],
-        str_as_bytes: bool = True,
     ) -> None:
         """Construct a NcFromYaml instance."""
         # self.logger = logging.getLogger("h5yaml.NcFromYaml")
         self.module = "h5py"
         super().__init__()
-        self.str_as_bytes = str_as_bytes
 
         for yaml_fl in nc_yaml_fl if isinstance(nc_yaml_fl, list) else [nc_yaml_fl]:
             try:
@@ -128,8 +124,8 @@ class NcFromYaml(H5Create):
         if self.module == "netCDF4":
             return self
 
-        NcFromYaml.__bases__ = (NcCreate,)
         self.module = "netCDF4"
+        NcFromYaml.__bases__ = (NcCreate,)
         return self
 
     def use_h5py(self: NcFromYaml) -> NcFromYaml:
@@ -137,6 +133,6 @@ class NcFromYaml(H5Create):
         if self.module == "h5py":
             return self
 
-        NcFromYaml.__bases__ = (H5Create,)
         self.module = "h5py"
+        NcFromYaml.__bases__ = (H5Create,)
         return self

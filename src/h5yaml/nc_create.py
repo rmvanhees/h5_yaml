@@ -68,7 +68,6 @@ class NcCreate:
         self.variables = {} if variables is None else variables
         self.attrs_global = {} if attrs_global is None else attrs_global
         self.attrs_groups = {} if attrs_groups is None else attrs_groups
-        self.str_as_bytes = False
 
     def __attrs(self: NcCreate, fid: Dataset) -> None:
         """Create global and group attributes.
@@ -79,18 +78,18 @@ class NcCreate:
            netCDF4 Dataset (mode 'r+')
 
         """
-        fid._NCCreator = (
-            f"h5yaml.{self.__class__.__name__}(NcCreate)"
-            f",version={__version__.split('+', maxsplit=1)[0]}"
+        fid.setncattr(
+            "_NCCreator",
+            (
+                f"h5yaml.{self.__class__.__name__}(NcCreate)"
+                f",version={__version__.split('+', maxsplit=1)[0]}"
+            ),
         )
         for key, val in self.attrs_global.items():
             if val == "TBW":
                 continue
 
-            if isinstance(val, str):
-                fid.setncattr_string(key, val)
-            else:
-                fid.setncattr(key, val)
+            fid.setncattr(key, val)
 
     def __groups(self: NcCreate, fid: Dataset) -> None:
         """Create groups in a netCDF4 product.
@@ -108,10 +107,7 @@ class NcCreate:
             if val == "TBW":
                 continue
 
-            if isinstance(val, str):
-                fid[str(Path(key).parent)].setncattr_string(Path(key).name, val)
-            else:
-                fid[str(Path(key).parent)].setncattr(Path(key).name, val)
+            fid[str(Path(key).parent)].setncattr(Path(key).name, val)
 
     def __dimensions(self: NcCreate, fid: Dataset) -> None:
         """Add dimensions to a netCDF4 product.
@@ -220,6 +216,7 @@ class NcCreate:
 
             # check for scalar dataset
             if val["_dims"][0] == "scalar":
+                print(var_name, is_compound, ds_dtype)
                 dset = var_grp.createVariable(
                     var_name,
                     ds_dtype,
@@ -319,19 +316,25 @@ class NcCreate:
         try:
             with Dataset(filename, "w") as fid:
                 self.__groups(fid)
-                self.__dimensions(fid)
                 self.__compounds(fid)
+                self.__dimensions(fid)
                 self.__variables(fid)
                 self.__attrs(fid)
         except PermissionError as exc:
             raise RuntimeError(f"failed to create {filename}") from exc
 
     def diskless(self: NcCreate) -> Dataset:
-        """Create a netCDF4 file in memory."""
+        """Create a netCDF4 file in memory.
+
+        Returns
+        -------
+          Dataset: to add data to the empty netCDF4 file.
+
+        """
         fid = Dataset("diskless.nc", "w", memory=2**30)
         self.__groups(fid)
-        self.__dimensions(fid)
         self.__compounds(fid)
+        self.__dimensions(fid)
         self.__variables(fid)
         self.__attrs(fid)
         return fid
@@ -352,3 +355,5 @@ class NcCreate:
                 _ = ff.write(fid.close())
         except PermissionError as exc:
             raise RuntimeError(f"failed create {filename}") from exc
+        except OSError as exc:
+            raise RuntimeError(f"failed to write {filename}") from exc

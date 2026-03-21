@@ -52,9 +52,10 @@ class H5Create:
     variables: dict | None = None
     attrs_global: dict | None = None
     attrs_groups: dict | None = None
-    str_as_bytes: bool = False
 
     """
+
+    STR2BYTES = False
 
     def __init__(
         self: H5Create,
@@ -64,7 +65,6 @@ class H5Create:
         variables: dict | None = None,
         attrs_global: dict | None = None,
         attrs_groups: dict | None = None,
-        str_as_bytes: bool = False,
     ) -> None:
         """Construct a H5Create instance."""
         self.logger = logging.getLogger("h5yaml.H5Create")
@@ -74,7 +74,6 @@ class H5Create:
         self.variables = {} if variables is None else variables
         self.attrs_global = {} if attrs_global is None else attrs_global
         self.attrs_groups = {} if attrs_groups is None else attrs_groups
-        self.str_as_bytes = str_as_bytes
 
     def _adjust_attr(
         self: H5Create, dtype: str, attr_key: str, attr_val: np.generic
@@ -133,7 +132,7 @@ class H5Create:
 
             return res
 
-        if self.str_as_bytes and isinstance(attr_val, str):
+        if self.STR2BYTES and isinstance(attr_val, str):
             return str2bytes(attr_val)
 
         return attr_val
@@ -147,16 +146,21 @@ class H5Create:
            HDF5 file pointer (mode 'w' or 'r+')
 
         """
-        fid.attrs["_NCCreator"] = str2bytes(
+        value = (
             f"h5yaml.{self.__class__.__name__}(H5Create)"
             f",version={__version__.split('+', maxsplit=1)[0]}"
+            f",{'options=str_as_bytes' if self.STR2BYTES else ''}"
         )
-        fid.attrs["_NCProperties"] = str2bytes(
-            f"version=2,hdf5={h5py.version.hdf5_version}"
-        )
+        fid.attrs["_NCCreator"] = str2bytes(value) if self.STR2BYTES else value
+        value = f"version=2,hdf5={h5py.version.hdf5_version}"
+        fid.attrs["_NCProperties"] = str2bytes(value) if self.STR2BYTES else value
         for key, value in self.attrs_global.items():
-            if key not in fid.attrs and value != "TBW":
-                fid.attrs[key] = str2bytes(value) if isinstance(value, str) else value
+            if key in fid.attrs or value == "TBW":
+                continue
+            if isinstance(value, str):
+                fid.attrs[key] = str2bytes(value) if self.STR2BYTES else value
+            else:
+                fid.attrs[key] = value
 
     def __groups(self: H5Create, fid: h5py.File) -> None:
         """Create groups in HDF5 product.
@@ -171,10 +175,14 @@ class H5Create:
             if key not in fid:
                 _ = fid.create_group(key, track_order=True)
         for key, value in self.attrs_groups.items():
-            if key not in fid.attrs and value != "TBW":
+            if key in fid.attrs or value == "TBW":
+                continue
+            if isinstance(value, str):
                 fid[str(Path(key).parent)].attrs[Path(key).name] = (
-                    str2bytes(value) if isinstance(value, str) else value
+                    str2bytes(value) if self.STR2BYTES else value
                 )
+            else:
+                fid[str(Path(key).parent)].attrs[Path(key).name] = value
 
     def __dimensions(self: H5Create, fid: h5py.File) -> None:
         """Add dimensions to HDF5 product.
@@ -354,15 +362,18 @@ class H5Create:
             if is_compound:
                 add_compound_attr()
 
-    def create(self: H5Create, filename: Path | str) -> None:
+    def create(self: H5Create, filename: Path | str, str_as_bytes: bool = True) -> None:
         """Create a HDF5/netCDF4 file (overwrite if exist).
 
         Parameters
         ----------
         filename :  Path | str
            Full name of the HDF5/netCDF4 file to be generated
+        str_as_bytes: bool, default=True
+           Convert string to a netCDF4 compatable byte-array
 
         """
+        self.STR2BYTES = str_as_bytes
         try:
             with h5py.File(filename, "w", track_order=True, libver=H5_LIBVER) as fid:
                 self.__groups(fid)
@@ -373,8 +384,20 @@ class H5Create:
         except PermissionError as exc:
             raise RuntimeError(f"failed create {filename}") from exc
 
-    def diskless(self: H5Create) -> h5py.File:
-        """Create a HDF5/netCDF4 file in memory."""
+    def diskless(self: H5Create, str_as_bytes: bool = True) -> h5py.File:
+        """Create a HDF5/netCDF4 file in memory.
+
+        Parameters
+        ----------
+        str_as_bytes: bool, default=True
+           Convert string to a netCDF4 compatable byte-array
+
+        Returns
+        -------
+          h5py.File: to add data to the empty HDF5 file
+
+        """
+        self.STR2BYTES = str_as_bytes
         fid = h5py.File.in_memory(track_order=True, libver=H5_LIBVER)
         self.__groups(fid)
         self.__dimensions(fid)
