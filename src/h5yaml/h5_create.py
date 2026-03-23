@@ -55,7 +55,7 @@ class H5Create:
 
     """
 
-    STR2BYTES = False
+    str2bytes = False
 
     def __init__(
         self: H5Create,
@@ -132,7 +132,7 @@ class H5Create:
 
             return res
 
-        if self.STR2BYTES and isinstance(attr_val, str):
+        if self.str2bytes and isinstance(attr_val, str):
             return str2bytes(attr_val)
 
         return attr_val
@@ -149,16 +149,16 @@ class H5Create:
         value = (
             f"h5yaml.{self.__class__.__name__}(H5Create)"
             f",version={__version__.split('+', maxsplit=1)[0]}"
-            f",{'options=str_as_bytes' if self.STR2BYTES else ''}"
+            f",{'options=str_as_bytes' if self.str2bytes else ''}"
         )
-        fid.attrs["_NCCreator"] = str2bytes(value) if self.STR2BYTES else value
+        fid.attrs["_NCCreator"] = str2bytes(value) if self.str2bytes else value
         value = f"version=2,hdf5={h5py.version.hdf5_version}"
-        fid.attrs["_NCProperties"] = str2bytes(value) if self.STR2BYTES else value
+        fid.attrs["_NCProperties"] = str2bytes(value) if self.str2bytes else value
         for key, value in self.attrs_global.items():
             if key in fid.attrs or value == "TBW":
                 continue
             if isinstance(value, str):
-                fid.attrs[key] = str2bytes(value) if self.STR2BYTES else value
+                fid.attrs[key] = str2bytes(value) if self.str2bytes else value
             else:
                 fid.attrs[key] = value
 
@@ -179,7 +179,7 @@ class H5Create:
                 continue
             if isinstance(value, str):
                 fid[str(Path(key).parent)].attrs[Path(key).name] = (
-                    str2bytes(value) if self.STR2BYTES else value
+                    str2bytes(value) if self.str2bytes else value
                 )
             else:
                 fid[str(Path(key).parent)].attrs[Path(key).name] = value
@@ -219,13 +219,14 @@ class H5Create:
                 elif "_range" in val:
                     dset[:] = np.arange(*val["_range"], dtype=val["_dtype"])
 
-            dset.make_scale(
-                Path(key).name
-                if "long_name" in val
-                else "This is a netCDF dimension but not a netCDF variable."
-            )
             if fillvalue is not None:
                 dset.attrs["_FillValue"] = dset.fillvalue
+
+            dset.make_scale(
+                Path(key).name
+                if len(val) > 2
+                else "This is a netCDF dimension but not a netCDF variable."
+            )
 
             for attr, attr_val in val.items():
                 if not attr.startswith("_"):
@@ -242,6 +243,112 @@ class H5Create:
         """
         for key, val in self.compounds.items():
             fid[key] = np.dtype([(k, v[0]) for k, v in val.items()], align=True)
+
+    def __var_scalar(self: H5Create, fid: h5py.File, key: str, val: dict) -> dict:
+        """Return parameters to create a scalar variable.
+
+        Parameters
+        ----------
+        key :  str
+           Name of the variable
+        val :  dict
+           Properties of the variable
+
+        """
+        fillvalue = None
+        if "_FillValue" in val:
+            fillvalue = np.nan if val["_FillValue"] == "NaN" else val["_FillValue"]
+
+        return {
+            "name": key,
+            "shape": (),
+            "dtype": fid[val["_dtype"]].dtype
+            if val["_dtype"] in fid
+            else ("T" if val["_dtype"] == "str" else val["_dtype"]),
+            "fillvalue": fillvalue,
+        }
+
+    def __var_nochunk(self: H5Create, fid: h5py.File, key: str, val: dict) -> dict:
+        """..."""
+        fillvalue = None
+        if "_FillValue" in val:
+            fillvalue = np.nan if val["_FillValue"] == "NaN" else val["_FillValue"]
+
+        n_udim = 0
+        ds_shape = ()
+        for coord in val["_dims"]:
+            dim_sz = fid[coord].size
+            n_udim += int(dim_sz == 0)
+            ds_shape += (dim_sz,)
+
+        if n_udim > 0:
+            raise KeyError(
+                "you can not create a contiguous dataset with unlimited dimensions."
+            )
+
+        return {
+            "name": key,
+            "shape": ds_shape,
+            "maxshape": None,
+            "dtype": fid[val["_dtype"]].dtype
+            if val["_dtype"] in fid
+            else ("T" if val["_dtype"] == "str" else val["_dtype"]),
+            "fillvalue": fillvalue,
+        }
+
+    def __var_chunked(self: H5Create, fid: h5py.File, key: str, val: dict) -> dict:
+        """..."""
+        fillvalue = None
+        if "_FillValue" in val:
+            fillvalue = np.nan if val["_FillValue"] == "NaN" else val["_FillValue"]
+
+        n_udim = 0
+        ds_shape = ()
+        ds_maxshape = ()
+        for coord in val["_dims"]:
+            dim_sz = fid[coord].size
+            n_udim += int(dim_sz == 0)
+            ds_shape += (dim_sz,)
+            ds_maxshape += (dim_sz if dim_sz > 0 else None,)
+
+        # currently, we can not handle more than one unlimited dimension
+        if n_udim > 1:
+            raise ValueError(f"{key} has more than one unlimited dimension")
+
+        ds_chunk = val.get("_chunks")
+        if ds_chunk is not None and not isinstance(ds_chunk, bool):
+            ds_chunk = tuple(ds_chunk)
+        compression = None
+        shuffle = False
+        # currently only gzip compression is supported
+        if "_compression" in val:
+            compression = val["_compression"]
+            shuffle = True
+
+        ds_dtype = (
+            fid[val["_dtype"]].dtype
+            if val["_dtype"] in fid
+            else ("T" if val["_dtype"] == "str" else val["_dtype"])
+        )
+        if val.get("_vlen"):
+            ds_name = (
+                val["_dtype"].split("_")[0] if "_" in val["_dtype"] else val["_dtype"]
+            ) + "_vlen"
+            if ds_name not in fid:
+                fid[ds_name] = h5py.vlen_dtype(ds_dtype)
+                ds_dtype = fid[ds_name]
+                fillvalue = None
+
+        return {
+            "name": key,
+            "shape": ds_shape,
+            "maxshape": ds_maxshape,
+            "dtype": ds_dtype,
+            "chunks": ds_chunk,
+            "compression": compression,
+            "shuffle": shuffle,
+            "fillvalue": fillvalue,
+        }
 
     def __variables(self: H5Create, fid: h5py.File) -> None:
         """Add datasets to HDF5 product.
@@ -263,104 +370,32 @@ class H5Create:
                 dset.attrs["names"] = [v[1] for k, v in compound.items()]
 
         for key, val in self.variables.items():
-            if val["_dtype"] in fid:  # True when compound-dtype
-                is_compound = True
-                ds_dtype = fid[val["_dtype"]].dtype
-            else:
-                is_compound = False
-                ds_dtype = "T" if val["_dtype"] == "str" else val["_dtype"]
+            # check if dtype of variable is compound
+            is_compound = val["_dtype"] in fid
 
-            fillvalue = None
-            if "_FillValue" in val:
-                fillvalue = np.nan if val["_FillValue"] == "NaN" else val["_FillValue"]
-
-            # check for scalar dataset
+            # create variable
+            is_scalar = False
             if val["_dims"][0] == "scalar":
-                dset = fid.create_dataset(key, (), dtype=ds_dtype, fillvalue=fillvalue)
-                if fillvalue is not None:
-                    dset.attrs["_FillValue"] = dset.fillvalue
-                for attr, attr_val in val.items():
-                    if attr.startswith("_"):
-                        continue
-                    dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
-
-                if is_compound:
-                    add_compound_attr()
-                continue
-
-            n_udim = 0
-            ds_shape = ()
-            ds_maxshape = ()
-            for coord in val["_dims"]:
-                dim_sz = fid[coord].size
-                n_udim += int(dim_sz == 0)
-                ds_shape += (dim_sz,)
-                ds_maxshape += (dim_sz if dim_sz > 0 else None,)
-
-            # currently, we can not handle more than one unlimited dimension
-            if n_udim > 1:
-                raise ValueError(f"{key} has more than one unlimited dimension")
-
-            if None in ds_maxshape and val.get("_chunks") == "contiguous":
-                raise KeyError(
-                    "you can not create a contiguous dataset with unlimited dimensions."
-                )
-
-            # create the variable
-            if val.get("_chunks") == "contiguous":
-                dset = fid.create_dataset(
-                    key,
-                    ds_shape,
-                    dtype=ds_dtype,
-                    maxshape=None,
-                    fillvalue=fillvalue,
-                )
-                if fillvalue is not None:
-                    dset.attrs["_FillValue"] = dset.fillvalue
+                is_scalar = True
+                dset = fid.create_dataset(**self.__var_scalar(fid, key, val))
+            elif val.get("_chunks") == "contiguous":
+                dset = fid.create_dataset(**self.__var_nochunk(fid, key, val))
             else:
-                ds_chunk = val.get("_chunks")
-                if ds_chunk is not None and not isinstance(ds_chunk, bool):
-                    ds_chunk = tuple(ds_chunk)
-                compression = None
-                shuffle = False
-                # currently only gzip compression is supported
-                if "_compression" in val:
-                    compression = val["_compression"]
-                    shuffle = True
+                dset = fid.create_dataset(**self.__var_chunked(fid, key, val))
 
-                if val.get("_vlen"):
-                    ds_name = (
-                        val["_dtype"].split("_")[0]
-                        if "_" in val["_dtype"]
-                        else val["_dtype"]
-                    ) + "_vlen"
-                    if ds_name not in fid:
-                        fid[ds_name] = h5py.vlen_dtype(ds_dtype)
-                    ds_dtype = fid[ds_name]
-                    fillvalue = None
-
-                dset = fid.create_dataset(
-                    key,
-                    ds_shape,
-                    dtype=ds_dtype,
-                    chunks=ds_chunk,
-                    maxshape=ds_maxshape,
-                    fillvalue=fillvalue,
-                    compression=compression,
-                    shuffle=shuffle,
-                )
-                if fillvalue is not None:
-                    dset.attrs["_FillValue"] = dset.fillvalue
-
-            for ii, coord in enumerate(val["_dims"]):
-                dset.dims[ii].attach_scale(fid[coord])
+            if val.get("_FillValue") and dset.fillvalue is not None:
+                dset.attrs["_FillValue"] = dset.fillvalue
 
             for attr, attr_val in val.items():
-                if not attr.startswith("_"):
-                    dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
+                if attr.startswith("_"):
+                    continue
+                dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
             if is_compound:
                 add_compound_attr()
+
+            for ii, coord in enumerate([] if is_scalar else val["_dims"]):
+                dset.dims[ii].attach_scale(fid[coord])
 
     def create(self: H5Create, filename: Path | str, str_as_bytes: bool = True) -> None:
         """Create a HDF5/netCDF4 file (overwrite if exist).
@@ -373,7 +408,7 @@ class H5Create:
            Convert string to a netCDF4 compatable byte-array
 
         """
-        self.STR2BYTES = str_as_bytes
+        self.str2bytes = str_as_bytes
         try:
             with h5py.File(filename, "w", track_order=True, libver=H5_LIBVER) as fid:
                 self.__groups(fid)
@@ -397,7 +432,7 @@ class H5Create:
           h5py.File: to add data to the empty HDF5 file
 
         """
-        self.STR2BYTES = str_as_bytes
+        self.str2bytes = str_as_bytes
         fid = h5py.File.in_memory(track_order=True, libver=H5_LIBVER)
         self.__groups(fid)
         self.__dimensions(fid)
