@@ -383,7 +383,7 @@ class H5Create:
             else:
                 dset = fid.create_dataset(**self.__var_chunked(fid, key, val))
 
-            if val.get("_FillValue") and dset.fillvalue is not None:
+            if "_FillValue" in val and dset.fillvalue is not None:
                 dset.attrs["_FillValue"] = dset.fillvalue
 
             for attr, attr_val in val.items():
