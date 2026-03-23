@@ -36,7 +36,7 @@ class TestFromYaml:
 
     _res = NcFromYaml(files("h5yaml.Data") / "h5_testing.yaml")
     H5_DEF = _res.asdict
-    FID_H5 = _res.diskless()
+    FID_H5 = _res.diskless(str_as_bytes=False)
 
     def test_exceptions(self: TestFromYaml) -> None:
         """Unit-test for class exeptions."""
