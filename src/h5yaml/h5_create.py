@@ -269,7 +269,16 @@ class H5Create:
         }
 
     def __var_nochunk(self: H5Create, fid: h5py.File, key: str, val: dict) -> dict:
-        """..."""
+        """Return parameters to create a variable without chunking.
+
+        Parameters
+        ----------
+        key :  str
+           Name of the variable
+        val :  dict
+           Properties of the variable
+
+        """
         fillvalue = None
         if "_FillValue" in val:
             fillvalue = np.nan if val["_FillValue"] == "NaN" else val["_FillValue"]
@@ -297,7 +306,16 @@ class H5Create:
         }
 
     def __var_chunked(self: H5Create, fid: h5py.File, key: str, val: dict) -> dict:
-        """..."""
+        """Return parameters to create a variable with chunking.
+
+        Parameters
+        ----------
+        key :  str
+           Name of the variable
+        val :  dict
+           Properties of the variable
+
+        """
         fillvalue = None
         if "_FillValue" in val:
             fillvalue = np.nan if val["_FillValue"] == "NaN" else val["_FillValue"]
@@ -330,7 +348,7 @@ class H5Create:
             if val["_dtype"] in fid
             else ("T" if val["_dtype"] == "str" else val["_dtype"])
         )
-        if val.get("_vlen"):
+        if "_vlen" in val:
             ds_name = (
                 val["_dtype"].split("_")[0] if "_" in val["_dtype"] else val["_dtype"]
             ) + "_vlen"
@@ -359,16 +377,6 @@ class H5Create:
            HDF5 file pointer (mode 'w' or 'r+')
 
         """
-
-        def add_compound_attr() -> None:
-            compound = self.compounds[val["_dtype"]]
-            res = [v[2] for k, v in compound.items() if len(v) == 3]
-            if res:
-                dset.attrs["units"] = [v[1] for k, v in compound.items()]
-                dset.attrs["names"] = res
-            else:
-                dset.attrs["names"] = [v[1] for k, v in compound.items()]
-
         for key, val in self.variables.items():
             # check if dtype of variable is compound
             is_compound = val["_dtype"] in fid
@@ -392,7 +400,13 @@ class H5Create:
                 dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
             if is_compound:
-                add_compound_attr()
+                compound = self.compounds[val["_dtype"]]
+                res = [v[2] for k, v in compound.items() if len(v) == 3]
+                if res:
+                    dset.attrs["units"] = [v[1] for k, v in compound.items()]
+                    dset.attrs["names"] = res
+                else:
+                    dset.attrs["names"] = [v[1] for k, v in compound.items()]
 
             for ii, coord in enumerate([] if is_scalar else val["_dims"]):
                 dset.dims[ii].attach_scale(fid[coord])
