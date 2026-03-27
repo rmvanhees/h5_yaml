@@ -3,6 +3,7 @@
 [![image](https://img.shields.io/pypi/l/h5yaml.svg)](https://github.com/rmvanhees/h5yaml/LICENSE)
 [![image](https://img.shields.io/pypi/dm/h5yaml.svg)](https://pypi.org/project/h5yaml/)
 [![image](https://img.shields.io/pypi/status/h5yaml.svg?label=status)](https://pypi.org/project/h5yaml/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 ## Description
 This package let you design the layout of [HDF5](https://docs.h5py.org/en/stable/)/[netCDF4](https://unidata.github.io/netcdf4-python/) files.

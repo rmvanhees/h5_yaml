@@ -42,13 +42,15 @@ def safe_eval(expr: str) -> None:
             left = eval_node(node.left)
             right = eval_node(node.right)
             return allowed_operators[type(node.op)](left, right)
-        elif isinstance(node, ast.UnaryOp):
+
+        if isinstance(node, ast.UnaryOp):
             operand = eval_node(node.operand)
             return allowed_operators[type(node.op)](operand)
-        elif isinstance(node, ast.Constant):
+
+        if isinstance(node, ast.Constant):
             return node.value
-        else:
-            raise TypeError("Unsupported expression")
+
+        raise TypeError("Unsupported expression")
 
     parsed = ast.parse(expr, mode="eval")
     return eval_node(parsed.body)

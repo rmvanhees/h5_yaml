@@ -31,7 +31,7 @@ import h5py
 import numpy as np
 
 from . import __version__
-from .safe_eval import safe_eval
+from .lib.safe_eval import safe_eval
 
 H5_LIBVER = ("v110", "latest")
 
