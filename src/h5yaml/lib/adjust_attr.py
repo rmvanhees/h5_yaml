@@ -26,6 +26,8 @@ __all__ = ["adjust_attr"]
 
 import numpy as np
 
+from .safe_eval import safe_eval
+
 
 # - main function ------------------------------------
 def adjust_attr(dtype: str, attr_key: str, attr_val: np.generic) -> np.generic:
@@ -51,7 +53,7 @@ def adjust_attr(dtype: str, attr_key: str, attr_val: np.generic) -> np.generic:
         return np.array(attr_val, dtype=dtype)
 
     if attr_key == "scale_factor" and isinstance(attr_val, str):
-        return eval(attr_val)
+        return safe_eval(attr_val)
 
     if attr_key in ("valid_min", "valid_max", "valid_range"):
         match dtype:

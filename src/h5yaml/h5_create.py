@@ -31,6 +31,7 @@ import h5py
 import numpy as np
 
 from . import __version__
+from .safe_eval import safe_eval
 
 H5_LIBVER = ("v110", "latest")
 
@@ -101,7 +102,7 @@ class H5Create:
             return np.array(attr_val, dtype=dtype)
 
         if attr_key == "scale_factor" and isinstance(attr_val, str):
-            return eval(attr_val)
+            return safe_eval(attr_val)
 
         if attr_key in ("valid_min", "valid_max", "valid_range"):
             match dtype:
