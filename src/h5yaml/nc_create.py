@@ -164,20 +164,9 @@ class NcCreate:
                 }
             )
 
-    def __compounds(self: NcCreate, fid: Dataset) -> None:
-        """Add compound datatypes to a netCDF4 product.
-
-        Parameters
-        ----------
-        fid :  netCDF4.Dataset
-           netCDF4 Dataset (mode 'r+')
-
-        """
-        for key, val in self.compounds.items():
-            comp_t = np.dtype([(k, v[0]) for k, v in val.items()])
-            _ = fid.createCompoundType(comp_t, key)
-
-    def __var_scalar(self: NcCreate, fid: Dataset, key: str, val: dict) -> dict:
+    def __var_scalar(
+        self: NcCreate, fid: Dataset, key: str, val: dict, compound: None | dict
+    ) -> dict:
         """Return parameters to create a scalar variable.
 
         Parameters
@@ -186,24 +175,28 @@ class NcCreate:
            Name of the variable
         val :  dict
            Properties of the variable
+        compound :  None | dict
+           Properties of the compound data-type
 
         """
         fillvalue = None
-        if "_FillValue" in val:
+        if compound is None and "_FillValue" in val:
             fillvalue = np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
+
+        datatype = val["_dtype"]
+        if compound is not None:
+            cmp_t = np.dtype([(k, v[0]) for k, v in compound.items()])
+            datatype = fid.createCompoundType(cmp_t, val["_dtype"])
 
         return {
             "varname": key,
-            "datatype": (
-                fid.cmptypes[val["_dtype"]]
-                if val["_dtype"] in fid.cmptypes
-                else val["_dtype"]
-            ),
-            "contiguous": True,
+            "datatype": datatype,
             "fill_value": fillvalue,
         }
 
-    def __var_nochunk(self: NcCreate, fid: Dataset, key: str, val: dict) -> dict:
+    def __var_nochunk(
+        self: NcCreate, fid: Dataset, key: str, val: dict, compound: None | dict
+    ) -> dict:
         """Return parameters to create a variable without chunking.
 
         Parameters
@@ -212,11 +205,18 @@ class NcCreate:
            Name of the variable
         val :  dict
            Properties of the variable
+        compound :  None | dict
+           Properties of the compound data-type
 
         """
         fillvalue = None
-        if "_FillValue" in val:
+        if compound is None and "_FillValue" in val:
             fillvalue = np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
+
+        datatype = val["_dtype"]
+        if compound is not None:
+            cmp_t = np.dtype([(k, v[0]) for k, v in compound.items()])
+            datatype = fid.createCompoundType(cmp_t, val["_dtype"])
 
         n_udim = 0
         var_dims = []
@@ -237,17 +237,15 @@ class NcCreate:
 
         return {
             "varname": key,
-            "datatype": (
-                fid.cmptypes[val["_dtype"]]
-                if val["_dtype"] in fid.cmptypes
-                else val["_dtype"]
-            ),
+            "datatype": datatype,
             "dimensions": var_dims,
             "contiguous": True,
             "fill_value": fillvalue,
         }
 
-    def __var_chunked(self: NcCreate, fid: Dataset, key: str, val: dict) -> dict:
+    def __var_chunked(
+        self: NcCreate, fid: Dataset, key: str, val: dict, compound: None | dict
+    ) -> dict:
         """Return parameters to create a variable with chunking.
 
         Parameters
@@ -256,10 +254,12 @@ class NcCreate:
            Name of the variable
         val :  dict
            Properties of the variable
+        compound :  None | dict
+           Properties of the compound data-type
 
         """
         fillvalue = None
-        if "_FillValue" in val:
+        if compound is None and "_FillValue" in val:
             fillvalue = np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
 
         n_udim = 0
@@ -288,20 +288,20 @@ class NcCreate:
         if ds_chunk is not None:
             ds_chunk = None if isinstance(ds_chunk, bool) else tuple(ds_chunk)
 
-        ds_dtype = (
-            fid.cmptypes[val["_dtype"]]
-            if val["_dtype"] in fid.cmptypes
-            else val["_dtype"]
-        )
+        datatype = val["_dtype"]
+        if compound is not None:
+            cmp_t = np.dtype([(k, v[0]) for k, v in compound.items()])
+            datatype = fid.createCompoundType(cmp_t, val["_dtype"])
+
         if "_vlen" in val:
             if val["_dtype"] in fid.cmptypes:
                 raise ValueError("can not have vlen with compounds")
-            ds_dtype = fid.createVLType(ds_dtype, "phony_vlen")
+            datatype = fid.createVLType(datatype, "phony_vlen")
             fillvalue = None
 
         return {
             "varname": key,
-            "datatype": ds_dtype,
+            "datatype": datatype,
             "dimensions": var_dims,
             "fill_value": fillvalue,
             "compression": compression,
@@ -323,17 +323,25 @@ class NcCreate:
             var_grp = fid[pkey.parent] if pkey.is_absolute() else fid
             var_name = pkey.name if pkey.is_absolute() else key
 
-            # check if dtype of variable is compound
-            is_compound = val["_dtype"] in fid.cmptypes
+            # check if dtype of variable is a compound
+            compound = self.compounds.get(val["_dtype"], None)
 
             # create variable
             if val["_dims"][0] == "scalar":
-                dset = var_grp.createVariable(**self.__var_scalar(fid, var_name, val))
+                dset = var_grp.createVariable(
+                    **self.__var_scalar(fid, var_name, val, compound)
+                )
+                print(f"scalar: {dset}")
             elif val.get("_chunks") == "contiguous":
-                dset = var_grp.createVariable(**self.__var_nochunk(fid, var_name, val))
+                dset = var_grp.createVariable(
+                    **self.__var_nochunk(fid, var_name, val, compound)
+                )
             else:
-                dset = var_grp.createVariable(**self.__var_chunked(fid, var_name, val))
+                dset = var_grp.createVariable(
+                    **self.__var_chunked(fid, var_name, val, compound)
+                )
 
+            # add attributes
             dset.setncatts(
                 {
                     k: adjust_attr(val["_dtype"], k, v)
@@ -341,8 +349,9 @@ class NcCreate:
                     if not k.startswith("_")
                 }
             )
-            if is_compound:
-                compound = self.compounds[val["_dtype"]]
+
+            # add compound attributes
+            if compound is not None:
                 res = [v[2] for k, v in compound.items() if len(v) == 3]
                 if res:
                     dset.units = [v[1] for k, v in compound.items()]
@@ -362,7 +371,6 @@ class NcCreate:
         try:
             with Dataset(filename, "w") as fid:
                 self.__groups(fid)
-                self.__compounds(fid)
                 self.__dimensions(fid)
                 self.__variables(fid)
                 self.__attrs(fid)
@@ -379,7 +387,6 @@ class NcCreate:
         """
         fid = Dataset("diskless.nc", "w", memory=2**30)
         self.__groups(fid)
-        self.__compounds(fid)
         self.__dimensions(fid)
         self.__variables(fid)
         self.__attrs(fid)
