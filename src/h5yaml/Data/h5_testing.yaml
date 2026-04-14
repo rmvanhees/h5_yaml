@@ -59,28 +59,21 @@ dimensions:
     valid_max: 92400
 
 # Define compound types
-# - compound elements must have a data-type, and can have a unit and long_name 
+# - compound elements must have a list with data-type and optionally number of elements
 compounds:
   stats_dtype:
-    time:
-      - u8
-      - seconds since 1970-01-01T00:00:00
-      - timestamp
-    index: [u2, '1', index]
-    tbl_id: [u1, '1', binning id]
-    saa: [u1, '1', saa-flag]
-    coad: [u1, '1', co-addings]
-    texp: [f4, ms, exposure time]
-    lat: [f4, degree, latitude]
-    lon: [f4, degree, longitude]
-    avg: [f4, '1', '$S - S_{ref}$']
-    unc: [f4, '1', '\u03c3($S - S_{ref}$)']
-    dark_offs: [f4, '1', dark-offset]
+    time: [u8]
+    index: [u2]
+    tbl_id: [u1]
+    saa: [u1]
+    coad: [u1]
+    texp: [f4]
+    lat: [f4]
+    lon: [f4]
+    avg: [f4]
+    unc: [f4]
+    dark_offs: [f4, (2,)]
 
-  geo_dtype:
-    lat: [f4, latitude]
-    lon: [f4, longitude]
-    
 # Define variables
 variables:
   # ---------- GROUP 00 ----------
@@ -137,7 +130,31 @@ variables:
   /group_01/stats:
     _dtype: stats_dtype
     _dims: [time]
-    comment: detector map statistics
+    long_name: detector map statistics
+    field_units:
+      - seconds since 1970-01-01T00:00:00
+      - '1'
+      - '1'
+      - '1'
+      - '1'
+      - ms
+      - degrees_north
+      - degrees_east
+      - '1'
+      - '1'
+      - '1'
+    field_name:
+      - timestamp
+      - index
+      - binning id
+      - saa-flag
+      - co-addings
+      - exposure time
+      - latitude
+      - longitude
+      - '$S - S_{ref}$'
+      - '\u03c3($S - S_{ref}$)'
+      - dark offset
   # ---------- GROUP 02 ----------
   /group_02/detector_images:
     _dtype: u2
@@ -153,7 +170,7 @@ variables:
     _dtype: stats_dtype
     _vlen: True
     _dims: [time]
-    comment: detector map statistics (vlen)
+    long_name: detector map statistics (vlen)
   # ---------- GROUP 03 ----------
   /group_03/ds_01:
     _dtype: u1
