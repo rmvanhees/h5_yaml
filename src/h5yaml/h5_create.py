@@ -243,7 +243,7 @@ class H5Create:
 
         """
         for key, val in self.compounds.items():
-            fid[key] = np.dtype([(k, v[0]) for k, v in val.items()], align=True)
+            fid[key] = np.dtype([(k, *v) for k, v in val.items()], align=True)
 
     def __var_scalar(self: H5Create, fid: h5py.File, key: str, val: dict) -> dict:
         """Return parameters to create a scalar variable.
@@ -380,7 +380,7 @@ class H5Create:
         """
         for key, val in self.variables.items():
             # check if dtype of variable is compound
-            is_compound = val["_dtype"] in fid
+            # is_compound = val["_dtype"] in fid
 
             # create variable
             is_scalar = False
@@ -400,14 +400,14 @@ class H5Create:
                     continue
                 dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
-            if is_compound:
-                compound = self.compounds[val["_dtype"]]
-                res = [v[2] for k, v in compound.items() if len(v) == 3]
-                if res:
-                    dset.attrs["units"] = [v[1] for k, v in compound.items()]
-                    dset.attrs["names"] = res
-                else:
-                    dset.attrs["names"] = [v[1] for k, v in compound.items()]
+            # if is_compound:
+            #    compound = self.compounds[val["_dtype"]]
+            #    res = [v[2] for k, v in compound.items() if len(v) == 3]
+            #    if res:
+            #        dset.attrs["units"] = [v[1] for k, v in compound.items()]
+            #        dset.attrs["names"] = res
+            ##    else:
+            #        dset.attrs["names"] = [v[1] for k, v in compound.items()]
 
             for ii, coord in enumerate([] if is_scalar else val["_dims"]):
                 dset.dims[ii].attach_scale(fid[coord])
