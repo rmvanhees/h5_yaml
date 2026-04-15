@@ -366,17 +366,19 @@ class NcCreate:
                 }
             )
 
-    def create(self: NcCreate, filename: Path | str) -> None:
+    def create(self: NcCreate, filename: Path | str, mode: str = "w") -> None:
         """Create a netCDF4 file (overwrite if exist).
 
         Parameters
         ----------
         filename :  Path | str
            Name of the file on disk, or file-like object
+        mode :  {"r+", "w", "x", "a"}, default="w"
+           The value of mode is passed to netCDF4.Dataset, see `netCDF4` documentation
 
         """
         try:
-            with Dataset(filename, "w") as fid:
+            with Dataset(filename, mode) as fid:
                 self.__groups(fid)
                 self.__dimensions(fid)
                 self.__variables(fid)
@@ -387,12 +389,16 @@ class NcCreate:
     def diskless(self: NcCreate) -> Dataset:
         """Create a netCDF4 file in memory.
 
+        Notes
+        -----
+        An in-memory file will always created from scratch, `mode` has no meaning.
+
         Returns
         -------
           Dataset: to add data to the empty netCDF4 file.
 
         """
-        fid = Dataset("diskless.nc", "w", memory=2**30)
+        fid = Dataset("diskless.nc", "w", memory=4096)
         self.__groups(fid)
         self.__dimensions(fid)
         self.__variables(fid)

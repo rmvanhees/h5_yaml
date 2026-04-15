@@ -407,20 +407,27 @@ class H5Create:
                     continue
                 dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
-    def create(self: H5Create, filename: Path | str, str_as_bytes: bool = True) -> None:
+    def create(
+        self: H5Create,
+        filename: Path | str,
+        mode: str = "w",
+        str_as_bytes: bool = True,
+    ) -> None:
         """Create a HDF5/netCDF4 file (overwrite if exist).
 
         Parameters
         ----------
         filename :  Path | str
            Full name of the HDF5/netCDF4 file to be generated
+        mode :  {"r+", "w", "w-", "a"}, default="w"
+           The value of mode is passed to h5py.File, see `h5py` documentation
         str_as_bytes: bool, default=True
            Convert string to a netCDF4 compatable byte-array
 
         """
         self.str2bytes = str_as_bytes
         try:
-            with h5py.File(filename, "w", track_order=True, libver=H5_LIBVER) as fid:
+            with h5py.File(filename, mode, track_order=True, libver=H5_LIBVER) as fid:
                 self.__groups(fid)
                 self.__dimensions(fid)
                 self.__compounds(fid)
@@ -436,6 +443,10 @@ class H5Create:
         ----------
         str_as_bytes: bool, default=True
            Convert string to a netCDF4 compatable byte-array
+
+        Notes
+        -----
+        An in-memory file will always created from scratch, `mode` has no meaning.
 
         Returns
         -------
