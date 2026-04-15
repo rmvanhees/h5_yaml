@@ -72,7 +72,7 @@ compounds:
     lon: [f4]
     avg: [f4]
     unc: [f4]
-    dark_offs: [f4, (2,)]
+    dark_offs: [f4, [2,]]
 
 # Define variables
 variables:

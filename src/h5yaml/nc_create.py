@@ -186,7 +186,11 @@ class NcCreate:
         datatype = val["_dtype"]
         if compound is not None:
             cmp_t = np.dtype([(k, *v) for k, v in compound.items()])
-            datatype = fid.createCompoundType(cmp_t, val["_dtype"])
+            pkey = PurePosixPath(val["_dtype"])
+            if pkey.is_absolute():
+                datatype = fid[pkey.parent].createCompoundType(cmp_t, pkey.name)
+            else:
+                datatype = fid.createCompoundType(cmp_t, val["_dtype"])
 
         return {
             "varname": key,
@@ -216,7 +220,11 @@ class NcCreate:
         datatype = val["_dtype"]
         if compound is not None:
             cmp_t = np.dtype([(k, *v) for k, v in compound.items()])
-            datatype = fid.createCompoundType(cmp_t, val["_dtype"])
+            pkey = PurePosixPath(val["_dtype"])
+            if pkey.is_absolute():
+                datatype = fid[pkey.parent].createCompoundType(cmp_t, pkey.name)
+            else:
+                datatype = fid.createCompoundType(cmp_t, val["_dtype"])
 
         n_udim = 0
         var_dims = []
@@ -291,7 +299,11 @@ class NcCreate:
         datatype = val["_dtype"]
         if compound is not None:
             cmp_t = np.dtype([(k, *v) for k, v in compound.items()])
-            datatype = fid.createCompoundType(cmp_t, val["_dtype"])
+            pkey = PurePosixPath(val["_dtype"])
+            if pkey.is_absolute():
+                datatype = fid[pkey.parent].createCompoundType(cmp_t, pkey.name)
+            else:
+                datatype = fid.createCompoundType(cmp_t, val["_dtype"])
 
         if "_vlen" in val:
             if val["_dtype"] in fid.cmptypes:
@@ -341,7 +353,11 @@ class NcCreate:
                     **self.__var_chunked(fid, var_name, val, compound)
                 )
 
-            # add attributes
+            # write data to dataset
+            if "_values" in val:
+                dset[:] = val["_values"]
+
+            # add user-supplied attributes
             dset.setncatts(
                 {
                     k: adjust_attr(val["_dtype"], k, v)
@@ -349,15 +365,6 @@ class NcCreate:
                     if not k.startswith("_")
                 }
             )
-
-            # add compound attributes
-            # if compound is not None:
-            #    res = [v[2] for k, v in compound.items() if len(v) == 3]
-            #    if res:
-            #        dset.units = [v[1] for k, v in compound.items()]
-            #        dset.names = res
-            #    else:
-            #        dset.names = [v[1] for k, v in compound.items()]
 
     def create(self: NcCreate, filename: Path | str) -> None:
         """Create a netCDF4 file (overwrite if exist).

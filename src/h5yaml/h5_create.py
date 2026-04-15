@@ -379,9 +379,6 @@ class H5Create:
 
         """
         for key, val in self.variables.items():
-            # check if dtype of variable is compound
-            # is_compound = val["_dtype"] in fid
-
             # create variable
             is_scalar = False
             if val["_dims"][0] == "scalar":
@@ -392,25 +389,23 @@ class H5Create:
             else:
                 dset = fid.create_dataset(**self.__var_chunked(fid, key, val))
 
+            # set attribute FillValue
             if "_FillValue" in val and dset.fillvalue is not None:
                 dset.attrs["_FillValue"] = dset.fillvalue
 
+            # add dimension scales
+            for ii, coord in enumerate([] if is_scalar else val["_dims"]):
+                dset.dims[ii].attach_scale(fid[coord])
+
+            # write data to dataset
+            if "_values" in val:
+                dset[:] = val["_values"]
+
+            # set all user-suplied attributes
             for attr, attr_val in val.items():
                 if attr.startswith("_"):
                     continue
                 dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
-
-            # if is_compound:
-            #    compound = self.compounds[val["_dtype"]]
-            #    res = [v[2] for k, v in compound.items() if len(v) == 3]
-            #    if res:
-            #        dset.attrs["units"] = [v[1] for k, v in compound.items()]
-            #        dset.attrs["names"] = res
-            ##    else:
-            #        dset.attrs["names"] = [v[1] for k, v in compound.items()]
-
-            for ii, coord in enumerate([] if is_scalar else val["_dims"]):
-                dset.dims[ii].attach_scale(fid[coord])
 
     def create(self: H5Create, filename: Path | str, str_as_bytes: bool = True) -> None:
         """Create a HDF5/netCDF4 file (overwrite if exist).
