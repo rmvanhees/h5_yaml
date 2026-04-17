@@ -2,3 +2,4 @@ h5py
 netCDF4
 numpy
 pyYAML
+pyyaml-include
