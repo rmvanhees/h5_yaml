@@ -29,6 +29,7 @@ import pprint
 from pathlib import Path
 
 import yaml
+import yaml_include
 
 from .h5_create import H5Create
 from .nc_create import NcCreate
@@ -54,6 +55,11 @@ def _from_yaml(file_path: Path | str) -> dict:
 
     if not file_path.is_file():
         raise FileNotFoundError(f"{file_path} not found")
+
+    # Register the !include tag
+    yaml.add_constructor(
+        "!inc", yaml_include.Constructor(base_dir=file_path.parent), yaml.SafeLoader
+    )
 
     with file_path.open("r", encoding="ascii") as fid:
         try:
