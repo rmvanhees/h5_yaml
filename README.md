@@ -152,17 +152,17 @@ The YAML file should be structured as follows:
    ```
    compounds:
      stats_dtype:
-       time: [u8, seconds since 1970-01-01T00:00:00, timestamp]
-       index: [u2, '1', index]
-       tbl_id: [u1, '1', binning id]
-       saa: [u1, '1', saa-flag]
-       coad: [u1, '1', co-addings]
-       texp: [f4, ms, exposure time]
-       lat: [f4, degree, latitude]
-       lon: [f4, degree, longitude]
-       avg: [f4, '1', '$S - S_{ref}$']
-       unc: [f4, '1', '\u03c3($S - S_{ref}$)']
-       dark_offs: [f4, '1', dark-offset]
+       time: [u8]
+       index: [u2]
+       tbl_id: [u1]
+       saa: [u1]
+       coad: [u1]
+       texp: [f4]
+       lat: [f4]
+       lon: [f4]
+       avg: [f4]
+       unc: [f4, [2,]]
+       dark_offs: [f4]
    ```
 
  * The 'variables' are defined by their data-type ('_dtype') and dimensions ('_dims'),
