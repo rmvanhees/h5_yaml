@@ -145,8 +145,8 @@ The YAML file should be structured as follows:
    ```
 
  * The 'compounds' are optional, but you should provide each compound data-type which
-   you want to use in your file. For each compound element you have to provide its
-   data-type and attributes: units and long_name. The 'compound' section may look like
+   you want to use in your file. For each compound element you have to provide a list with its
+   data-type and optionally its number of elements. The 'compound' section may look like
    this:
 
    ```
