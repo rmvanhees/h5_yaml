@@ -27,6 +27,7 @@ __all__ = ["sw_version"]
 import contextlib
 from importlib.metadata import PackageNotFoundError, version
 
+__version__ = "0.0.0"
 with contextlib.suppress(PackageNotFoundError):
     __version__ = version(__name__)
 
