@@ -18,9 +18,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Define version of the software."""
+"""Python package `H5Yaml`."""
 
-__all__ = ["__version__"]
+from __future__ import annotations
+
+__all__ = ["sw_version"]
+
+import contextlib
+from importlib.metadata import PackageNotFoundError, version
+
+with contextlib.suppress(PackageNotFoundError):
+    __version__ = version(__name__)
 
 
-from ._version import __version__
+def sw_version(full: bool = False) -> str:
+    """Return the software version as obtained from git."""
+    if full:
+        return __version__
+
+    return __version__.split("+")[0]

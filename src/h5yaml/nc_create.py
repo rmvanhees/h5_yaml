@@ -32,7 +32,7 @@ import numpy as np
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
-from . import __version__
+from . import sw_version
 from .lib.adjust_attr import adjust_attr
 
 
@@ -80,10 +80,7 @@ class NcCreate:
         """
         fid.setncattr(
             "_NCCreator",
-            (
-                f"h5yaml.{self.__class__.__name__}(NcCreate)"
-                f",version={__version__.split('+', maxsplit=1)[0]}"
-            ),
+            (f"h5yaml.{self.__class__.__name__}(NcCreate),version={sw_version()}"),
         )
         for key, val in self.attrs_global.items():
             if val == "TBW":

@@ -30,7 +30,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from . import __version__
+from . import sw_version
 from .lib.safe_eval import safe_eval
 
 H5_LIBVER = ("v110", "latest")
@@ -148,8 +148,7 @@ class H5Create:
 
         """
         value = (
-            f"h5yaml.{self.__class__.__name__}(H5Create)"
-            f",version={__version__.split('+', maxsplit=1)[0]}"
+            f"h5yaml.{self.__class__.__name__}(H5Create),version={sw_version()}"
             f",{'options=str_as_bytes' if self.str2bytes else ''}"
         )
         fid.attrs["_NCCreator"] = str2bytes(value) if self.str2bytes else value
