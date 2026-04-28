@@ -25,7 +25,7 @@ from __future__ import annotations
 __all__ = ["H5Create"]
 
 import logging
-from pathlib import Path
+from pathlib import Path, PosixPath
 
 import h5py
 import numpy as np
@@ -286,7 +286,7 @@ class H5Create:
         n_udim = 0
         ds_shape = ()
         for coord in val["_dims"]:
-            dim_sz = fid[coord].size
+            dim_sz = self.find_dim(fid, key, coord).size
             n_udim += int(dim_sz == 0)
             ds_shape += (dim_sz,)
 
@@ -324,7 +324,7 @@ class H5Create:
         ds_shape = ()
         ds_maxshape = ()
         for coord in val["_dims"]:
-            dim_sz = fid[coord].size
+            dim_sz = self.find_dim(fid, key, coord).size
             n_udim += int(dim_sz == 0)
             ds_shape += (dim_sz,)
             ds_maxshape += (dim_sz if dim_sz > 0 else None,)
@@ -368,6 +368,24 @@ class H5Create:
             "fillvalue": fillvalue,
         }
 
+    def find_dim(
+        self: H5Create, fid: h5py.File, var_name: str, dim_name: str
+    ) -> h5py.dataset:
+        """Find dimension."""
+        if (var_path := PosixPath(var_name)).is_absolute():
+            pp = var_path.parent
+            while str(pp / dim_name) not in fid:
+                if pp == pp.parent:
+                    raise ValueError(f"Dimension '{dim_name}' not found in file")
+                pp = pp.parent
+
+            return fid[str(pp / dim_name)]
+
+        if dim_name in fid:
+            return fid[dim_name]
+
+        raise ValueError(f"Dimension '{dim_name}' not found in file")
+
     def __variables(self: H5Create, fid: h5py.File) -> None:
         """Add datasets to HDF5 product.
 
@@ -379,26 +397,25 @@ class H5Create:
         """
         for key, val in self.variables.items():
             # create variable
-            is_scalar = False
             if val["_dims"][0] == "scalar":
-                is_scalar = True
                 dset = fid.create_dataset(**self.__var_scalar(fid, key, val))
-            elif val.get("_chunks") == "contiguous":
-                dset = fid.create_dataset(**self.__var_nochunk(fid, key, val))
             else:
-                dset = fid.create_dataset(**self.__var_chunked(fid, key, val))
+                if val.get("_chunks") == "contiguous":
+                    dset = fid.create_dataset(**self.__var_nochunk(fid, key, val))
+                else:
+                    dset = fid.create_dataset(**self.__var_chunked(fid, key, val))
 
-            # set attribute FillValue
-            if "_FillValue" in val and dset.fillvalue is not None:
-                dset.attrs["_FillValue"] = dset.fillvalue
-
-            # add dimension scales
-            for ii, coord in enumerate([] if is_scalar else val["_dims"]):
-                dset.dims[ii].attach_scale(fid[coord])
+                # add dimension scales
+                for ii, coord in enumerate(val["_dims"]):
+                    dset.dims[ii].attach_scale(self.find_dim(fid, key, coord))
 
             # write data to dataset
             if "_values" in val:
                 dset[:] = val["_values"]
+
+            # set attribute _FillValue
+            if "_FillValue" in val and dset.fillvalue is not None:
+                dset.attrs["_FillValue"] = dset.fillvalue
 
             # set all user-suplied attributes
             for attr, attr_val in val.items():
