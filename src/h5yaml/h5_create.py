@@ -372,19 +372,13 @@ class H5Create:
         self: H5Create, fid: h5py.File, var_name: str, dim_name: str
     ) -> h5py.dataset:
         """Find dimension."""
-        if (var_path := PosixPath(var_name)).is_absolute():
-            pp = var_path.parent
-            while str(pp / dim_name) not in fid:
-                if pp == pp.parent:
-                    raise ValueError(f"Dimension '{dim_name}' not found in file")
-                pp = pp.parent
+        for pp in PosixPath(var_name).parents:
+            if (dim_path := str(pp / dim_name)) in fid:
+                break
+        else:
+            raise ValueError(f"Dimension '{dim_name}' not found in file")
 
-            return fid[str(pp / dim_name)]
-
-        if dim_name in fid:
-            return fid[dim_name]
-
-        raise ValueError(f"Dimension '{dim_name}' not found in file")
+        return fid[dim_path]
 
     def __variables(self: H5Create, fid: h5py.File) -> None:
         """Add datasets to HDF5 product.

@@ -36,6 +36,19 @@ from . import sw_version
 from .lib.adjust_attr import adjust_attr
 
 
+def get_dim_size(fid: Dataset, pkey: PurePosixPath, coord: str) -> int:
+    """Get size of variable dimension."""
+    if coord in fid.dimensions:
+        return fid.dimensions[coord].size
+
+    if pkey.is_absolute():
+        for pp in pkey.parents:
+            if pp != PurePosixPath("/") and coord in fid[pp].dimensions:
+                return fid[pp].dimensions[coord].size
+
+    raise ValueError(f"Dimension '{coord}'not found in file")
+
+
 # - class definition -----------------------------------
 class NcCreate:
     """Class to create an empty netCDF4 file using Python package `netCDF4`.
@@ -223,27 +236,10 @@ class NcCreate:
             else:
                 datatype = fid.createCompoundType(cmp_t, val["_dtype"])
 
-        n_udim = 0
-        var_dims = []
-        for coord in val["_dims"]:
-            pcoord = PurePosixPath(coord)
-            var_dims.append(pcoord.name if pcoord.is_absolute() else coord)
-            if pcoord.is_absolute():
-                dim_sz = fid[pcoord.parent].dimensions[pcoord.name].size
-            else:
-                dim_sz = fid.dimensions[coord].size
-            n_udim += int(dim_sz == 0)
-
-        # currently, we can not handle more than one unlimited dimension
-        if n_udim > 0:
-            raise KeyError(
-                "you can not create a contiguous dataset with unlimited dimensions."
-            )
-
         return {
             "varname": key,
             "datatype": datatype,
-            "dimensions": var_dims,
+            "dimensions": val["_dims"],
             "contiguous": True,
             "fill_value": fillvalue,
         }
@@ -266,21 +262,6 @@ class NcCreate:
         fillvalue = None
         if compound is None and "_FillValue" in val:
             fillvalue = np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
-
-        n_udim = 0
-        var_dims = []
-        for coord in val["_dims"]:
-            pcoord = PurePosixPath(coord)
-            var_dims.append(pcoord.name if pcoord.is_absolute() else coord)
-            if pcoord.is_absolute():
-                dim_sz = fid[pcoord.parent].dimensions[pcoord.name].size
-            else:
-                dim_sz = fid.dimensions[coord].size
-            n_udim += int(dim_sz == 0)
-
-        # currently, we can not handle more than one unlimited dimension
-        if n_udim > 1:
-            raise ValueError(f"{key} has more than one unlimited dimension")
 
         compression = None
         complevel = 0
@@ -311,7 +292,7 @@ class NcCreate:
         return {
             "varname": key,
             "datatype": datatype,
-            "dimensions": var_dims,
+            "dimensions": val["_dims"],
             "fill_value": fillvalue,
             "compression": compression,
             "complevel": complevel,
@@ -340,15 +321,24 @@ class NcCreate:
                 dset = var_grp.createVariable(
                     **self.__var_scalar(fid, var_name, val, compound)
                 )
-                print(f"scalar: {dset}")
-            elif val.get("_chunks") == "contiguous":
-                dset = var_grp.createVariable(
-                    **self.__var_nochunk(fid, var_name, val, compound)
-                )
             else:
-                dset = var_grp.createVariable(
-                    **self.__var_chunked(fid, var_name, val, compound)
-                )
+                # check number of unlimited dimensions
+                n_udim = 0
+                for coord in val["_dims"]:
+                    n_udim += int(get_dim_size(fid, pkey, coord) == 0)
+
+                # currently, we can not handle more than one unlimited dimension
+                if n_udim > 1:
+                    raise ValueError(f"{key} has more than one unlimited dimension")
+
+                if val.get("_chunks") == "contiguous":
+                    dset = var_grp.createVariable(
+                        **self.__var_nochunk(fid, var_name, val, compound)
+                    )
+                else:
+                    dset = var_grp.createVariable(
+                        **self.__var_chunked(fid, var_name, val, compound)
+                    )
 
             # write data to dataset
             if "_values" in val:

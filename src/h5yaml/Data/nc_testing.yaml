@@ -223,7 +223,7 @@ variables:
   #  valid_max: 999.9
   /group_03/ds_10:
     _dtype: f4
-    _dims: [number_of_images, /group_03/viewport]
+    _dims: [number_of_images, viewport]
     long_name: float dataset
     units: '1'
     valid_min: -999.9
