@@ -19,12 +19,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+#  - \begin{longtable}{|p{0.25\textwidth}p{0.06\textwidth}p{0.15\textwidth}p{0.15\textwidth}p{0.1\textwidth}p{0.45\textwidth}|}
 header:
-  - \begin{longtable}{|p{0.215\textwidth}p{0.1\textwidth}p{0.1\textwidth}p{0.185\textwidth}p{0.075\textwidth}p{0.32\textwidth}|}
+  - \begin{longtable}{|p{3.3cm}p{0.75cm}p{1.9cm}p{1.9cm}p{1.3cm}p{5.8cm}|}
   - \caption{MYCAPTION}\label{MYLABEL}\\
   - \hline
   - \rowcolor{MediumBlue}
-  - \textbf{Name} & \textbf{Type} & \textbf{format} & \textbf{Dimensions} & \textbf{Units} & \textbf{Long Name} \\
+  - \textbf{Name} & \textbf{Type} & \textbf{Format} & \textbf{Dimensions} & \textbf{Units} & \textbf{Long Name} \\
   - \hline
   - \endfirsthead
   - \hline
@@ -35,5 +36,5 @@ header:
   - \endfoot
   - \endlastfoot
 footer:
+  - \hline
   - \end{longtable}
-  - \end{small}

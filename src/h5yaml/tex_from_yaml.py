@@ -130,58 +130,70 @@ class TexFromYaml:
                 self.variables |= config["variables"]
 
     def to_table(
-        self: TexFromYaml, caption: str | None = None, label: str | None = None
+        self: TexFromYaml,
+        tex_file: Path | str,
+        caption: str | None = None,
+        label: str | None = None,
     ) -> str:
         """..."""
+        tex_lines = ()
         config = _from_yaml(files("h5yaml.Data") / "tex_table.yaml")
         for line in config["header"]:
             if "MYCAPTION" in line and caption is not None:
                 line = line.replace("MYCAPTION", caption)
             if "MYLABEL" in line and label is not None:
                 line = line.replace("MYLABEL", label)
-            print(line)
+            tex_lines += (line,)
 
         for key, val in self.dimensions.items():
             if key.startswith("/"):
                 continue
-            print(
-                f"{key} & DIM & {_str_dtype(val['_dtype'])} & {val['_size']} & & \\\\"
+            tex_lines += (
+                f"{key} & DIM & {_str_dtype(val['_dtype'])}"
+                f" & size={val['_size']:d} & & \\\\",
             )
         for key, val in self.variables.items():
             if key.startswith("/"):
                 continue
-            print(
-                f"{key} & VAR & {_str_dtype(val['_dtype'])} & {val['_size']} & &"
-                f" {val.get('long_name', '')} & \\\\"
+            dims = 1 if val["_dims"][0] == "scalar" else ", ".join(val["_dims"])
+            tex_lines += (
+                f"{key} & VAR & {_str_dtype(val['_dtype'])} & {dims} & &"
+                f" {val.get('long_name', '')} \\\\",
             )
         for name in sorted(self.groups):
             grp = PurePosixPath("/") / name
-            print(f"{grp} & GRP & & & & \\\\")
+            tex_lines += ("\\hline",)
+            mcol = "\\multicolumn{4}{c}{GROUP}"
+            tex_lines += (f"{grp} & {mcol} & \\\\",)
             for key, val in self.dimensions.items():
                 pkey = PurePosixPath(key)
                 if pkey.parent == grp:
-                    print(
-                        f"\\qquad {pkey.name} & DIM & {_str_dtype(val['_dtype'])}"
-                        f" & {val['_size']} & & \\\\"
+                    tex_lines += (
+                        f"\\qquad {pkey.name} & DIM"
+                        f" & {_str_dtype(val['_dtype'])}"
+                        f" & size={val['_size']:d} & & \\\\",
                     )
             for key, val in self.variables.items():
                 pkey = PurePosixPath(key)
                 if pkey.parent == grp:
-                    dims = 1 if val["_dims"][0] == "scalar" else val["_dims"]
-                    print(
+                    dims = 1 if val["_dims"][0] == "scalar" else ", ".join(val["_dims"])
+                    tex_lines += (
                         f"\\qquad {pkey.name} & VAR & {_str_dtype(val['_dtype'])}"
                         f" & {dims} & {val.get('units', '1')}"
-                        f" & {val.get('long_name', '')} \\\\"
+                        f" & {val.get('long_name', '')} \\\\",
                     )
 
         for line in config["footer"]:
-            print(line)
+            tex_lines += (line,)
+
+        with open(tex_file, "w", encoding="utf-8") as fp:
+            fp.write("\n".join(tex_lines).replace("_", r"\_"))
 
 
 def main() -> None:
     """..."""
     tex = TexFromYaml(files("h5yaml.Data") / "h5_testing.yaml")
-    tex.to_table(caption="TANGO Carbon Level-1A", label="tab:l1a")
+    tex.to_table("h5_testing.tex", caption="TANGO Carbon Level-1A", label="tab:l1a")
 
 
 if __name__ == "__main__":
