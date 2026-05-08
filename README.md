@@ -1,8 +1,8 @@
-# H5YAML
-[![image](https://img.shields.io/pypi/v/h5yaml.svg?label=release)](https://github.com/rmvanhees/h5yaml/)
-[![image](https://img.shields.io/pypi/l/h5yaml.svg)](https://github.com/rmvanhees/h5yaml/LICENSE)
-[![image](https://img.shields.io/pypi/dm/h5yaml.svg)](https://pypi.org/project/h5yaml/)
-[![image](https://img.shields.io/pypi/status/h5yaml.svg?label=status)](https://pypi.org/project/h5yaml/)
+# H5Yaml
+[![image](https://img.shields.io/pypi/v/h5yaml.svg?label=release)](https://github.com/rmvanhees/h5_yaml/)
+[![image](https://img.shields.io/pypi/l/h5yaml.svg)](https://github.com/rmvanhees/h5_yaml/LICENSE)
+[![image](https://img.shields.io/pypi/dm/h5yaml.svg)](https://pypi.org/project/h5_yaml/)
+[![image](https://img.shields.io/pypi/status/h5yaml.svg?label=status)](https://pypi.org/project/h5_yaml/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 ## Description
