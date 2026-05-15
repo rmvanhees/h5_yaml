@@ -6,18 +6,15 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 ## Description
-This package let you design the layout of [HDF5](https://docs.h5py.org/en/stable/)/[netCDF4](https://unidata.github.io/netcdf4-python/) files.
-The layout of a netCDF4 file is defined by its *Groups* (defining the structure), *Dimensions*,
-*Variables* (its dataset) and *Attributes* (its metadata) for both file and variables. 
-As of version 0.4, you can create netCDF4 files based on a Python dictionary.
-This dictionary can be constructed from a [YAML](https://yaml.org/) file.
-But alternatively you could also use [JSON](https://json.org) or even XML
-(these may be added to future releases of `h5yaml`).
+This Python package let you design the abstract data model of your [HDF5](https://docs.h5py.org/en/stable/)/[netCDF4](https://unidata.github.io/netcdf4-python/) files.
+Where the Abstract Data Model is a conceptual model of data, data types, and data organization. We choose the human-readable data serialization language [YAML](https://yaml.org/) to define the Abstract Data Model with the following components:
 
-In the design phase, you can quickly generate very small netCDF4 files, because the variables
-are still empty. These products can be shared among colleagues for review or perform a 
-metadata compliance check with the [CF conventions](https://cfconventions.org/)
-of the [ACDD](https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3)
+ * *Groups* which define its Hierarchical structure
+ * *Variables* the datasets to hold your data
+ * *Dimensions* the size(s) of the variables
+ * *Attributes* the meta data of the *File*, *Groups*, or *Variables*
+
+From the YAML files, you can create HDF5 or netCDF4 files, which are small because the Variables may still be empty. Thus the abstract data model and storage model can be shared among your colleagues for review, or for metadata compliance checks. For example the [CF conventions](https://cfconventions.org/) or the [ACDD](https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3), by using:
 
  * https://mcc.podaac.earthdatacloud.nasa.gov
 
