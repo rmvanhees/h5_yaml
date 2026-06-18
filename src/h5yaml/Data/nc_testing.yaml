@@ -22,10 +22,9 @@
 # Define groups
 groups:
   - group_00
-  - group_01
+  - /group_01
   - group_02
-  - group_03
-  - processing_control
+  - /group_03
   - processing_control/input_parameters
 
 # Define dimensions

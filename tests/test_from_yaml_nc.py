@@ -25,6 +25,7 @@ from __future__ import annotations
 from importlib.resources import files
 from pathlib import Path, PurePosixPath
 
+import netCDF4
 import numpy as np
 import pytest
 
@@ -77,11 +78,7 @@ class TestFromYaml:
             return
 
         for key in self.NC_DEF["groups"]:
-            pkey = PurePosixPath(key)
-            if len(pkey.parts) > 1:
-                assert pkey.name in self.FID_NC[pkey.parent].groups
-            else:
-                assert key in self.FID_NC.groups
+            assert isinstance(self.FID_NC[key], netCDF4.Group)
 
     def test_nc_dimensions(self: TestFromYaml) -> None:
         """Unit-test to check the dimensions."""

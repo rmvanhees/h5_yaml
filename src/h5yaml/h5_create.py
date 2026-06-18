@@ -31,7 +31,7 @@ import h5py
 import numpy as np
 
 from . import sw_version
-from .lib.safe_eval import safe_eval
+from .lib.adjust_attr import adjust_attr
 
 H5_LIBVER = ("v110", "latest")
 
@@ -75,68 +75,6 @@ class H5Create:
         self.variables = {} if variables is None else variables
         self.attrs_global = {} if attrs_global is None else attrs_global
         self.attrs_groups = {} if attrs_groups is None else attrs_groups
-
-    def _adjust_attr(
-        self: H5Create, dtype: str, attr_key: str, attr_val: np.generic
-    ) -> np.generic:
-        """Return attribute converted to the same data type as its variable.
-
-        Parameters
-        ----------
-        dtype :  str
-           numpy data-type of variable
-        attr_key :  str
-           name of the attribute
-        attr_val :  np.generic
-           original value of the attribute
-
-        Returns
-        -------
-        attr_val converted to dtype
-
-        """
-        if attr_key == "flag_values":
-            return np.array(attr_val, dtype=dtype)
-
-        if attr_key == "flag_masks":
-            return np.array(attr_val, dtype=dtype)
-
-        if attr_key == "scale_factor" and isinstance(attr_val, str):
-            return safe_eval(attr_val)
-
-        if attr_key in ("valid_min", "valid_max", "valid_range"):
-            match dtype:
-                case "i1":
-                    res = np.int8(attr_val)
-                case "i2":
-                    res = np.int16(attr_val)
-                case "i4":
-                    res = np.int32(attr_val)
-                case "i8":
-                    res = np.int64(attr_val)
-                case "u1":
-                    res = np.uint8(attr_val)
-                case "u2":
-                    res = np.uint16(attr_val)
-                case "u4":
-                    res = np.uint32(attr_val)
-                case "u8":
-                    res = np.uint64(attr_val)
-                case "f2":
-                    res = np.float16(attr_val)
-                case "f4":
-                    res = np.float32(attr_val)
-                case "f8":
-                    res = np.float64(attr_val)
-                case _:
-                    res = attr_val
-
-            return res
-
-        if self.str2bytes and isinstance(attr_val, str):
-            return str2bytes(attr_val)
-
-        return attr_val
 
     def __attrs(self: H5Create, fid: h5py.File) -> None:
         """Create global and group attributes.
@@ -230,7 +168,7 @@ class H5Create:
 
             for attr, attr_val in val.items():
                 if not attr.startswith("_"):
-                    dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
+                    dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
 
     def __compounds(self: H5Create, fid: h5py.File) -> None:
         """Add compound datatypes to HDF5 product.
@@ -415,7 +353,7 @@ class H5Create:
             for attr, attr_val in val.items():
                 if attr.startswith("_"):
                     continue
-                dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
+                dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
 
     def create(
         self: H5Create,
