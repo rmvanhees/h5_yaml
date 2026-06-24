@@ -34,6 +34,8 @@ def safe_eval(expr: str) -> None:
         ast.Sub: operator.sub,
         ast.Mult: operator.mul,
         ast.Div: operator.truediv,
+        ast.Not: operator.not_,
+        ast.Invert: operator.invert,
     }
 
     def eval_node(node: ast.node) -> int | float:
@@ -50,7 +52,7 @@ def safe_eval(expr: str) -> None:
         if isinstance(node, ast.Constant):
             return node.value
 
-        raise TypeError("Unsupported expression")
+        raise KeyError("Unsupported expression")
 
     parsed = ast.parse(expr, mode="eval")
     return eval_node(parsed.body)
