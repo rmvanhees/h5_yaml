@@ -55,7 +55,7 @@ def adjust_attr(dtype: str, attr_key: str, attr_val: np.generic) -> np.generic:
     if attr_key == "scale_factor" and isinstance(attr_val, str):
         return safe_eval(attr_val)
 
-    if attr_key in ("valid_min", "valid_max", "valid_range"):
+    if attr_key in ("valid_min", "valid_max"):
         match dtype:
             case "i1":
                 res = np.int8(attr_val)
@@ -81,6 +81,14 @@ def adjust_attr(dtype: str, attr_key: str, attr_val: np.generic) -> np.generic:
                 res = np.float64(attr_val)
             case _:
                 res = attr_val
+
+        return res
+
+    if attr_key == "valid_range":
+        try:
+            res = np.array(attr_val, dtype=dtype)
+        except TypeError:
+            res = np.array(attr_val)
 
         return res
 
