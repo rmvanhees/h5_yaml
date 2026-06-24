@@ -18,26 +18,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Initialise netCDF4 file from a YAML configuration file using `h5py` or `netCDF4`."""
+"""Read netCDF4/HDF5 template from YAML configuration file."""
 
 from __future__ import annotations
 
-__all__ = ["NcFromYaml"]
+__all__ = ["ReadNcYaml"]
 
-# import logging
 import pprint
 from pathlib import Path
 
 import yaml
 import yaml_include
 
-from .h5_create import H5Create
-from .nc_create import NcCreate
-
 
 # - local function -------------------------------------
 def _from_yaml(file_path: Path | str) -> dict:
-    """Read settings from a YAML file: `file_path`.
+    """Read netCDF4/Hdf5 structure from a YAML file.
 
     Parameters
     ----------
@@ -47,7 +43,7 @@ def _from_yaml(file_path: Path | str) -> dict:
     Returns
     -------
     dict
-       content of the configuration file
+       dictionary with netCDF4 elements (groups, dimensions, variables and attributes)
 
     """
     if isinstance(file_path, str):
@@ -71,24 +67,27 @@ def _from_yaml(file_path: Path | str) -> dict:
 
 
 # - class definition -----------------------------------
-class NcFromYaml(H5Create):
-    """Class to create a netCDF4 formated file from a YAML configuration file.
+class ReadNcYaml:
+    """Class to read and show netCDF4/HDF5 template from YAML configuration file.
 
     Parameters
     ----------
     nc_yaml_fl :  Path | str | list[Path | str]
-       YAML files with the HDF5 format definition
+       YAML file(s) with the template of a netCDF4/HDF5 file
 
     """
 
     def __init__(
-        self: NcFromYaml,
+        self: ReadNcYaml,
         nc_yaml_fl: Path | str | list[Path | str],
     ) -> None:
-        """Construct a NcFromYaml instance."""
-        # self.logger = logging.getLogger("h5yaml.NcFromYaml")
-        self.module = "h5py"
-        super().__init__()
+        """Construct a ReadNcYaml instance."""
+        self.groups = set()
+        self.compounds = {}
+        self.dimensions = {}
+        self.variables = {}
+        self.attrs_global = {}
+        self.attrs_groups = {}
 
         for yaml_fl in nc_yaml_fl if isinstance(nc_yaml_fl, list) else [nc_yaml_fl]:
             try:
@@ -109,13 +108,13 @@ class NcFromYaml(H5Create):
             if "attrs_groups" in config:
                 self.attrs_groups |= config["attrs_groups"]
 
-    def __repr__(self: NcFromYaml) -> str:
+    def __repr__(self: ReadNcYaml) -> str:
         """Show object as dictionary."""
         return pprint.pformat(self.asdict)
 
     @property
-    def asdict(self: NcFromYaml) -> dict:
-        """Return definition of the HDF5/netCDF4 product."""
+    def asdict(self: ReadNcYaml) -> dict:
+        """Return dictionary with netCDF4/HDF5 elements."""
         return {
             "groups": self.groups,
             "dimensions": self.dimensions,
@@ -124,21 +123,3 @@ class NcFromYaml(H5Create):
             "attrs_global": self.attrs_global,
             "attrs_groups": self.attrs_groups,
         }
-
-    def use_netcdf4(self: NcFromYaml) -> NcFromYaml:
-        """Use module netCDF4 to generate the HDF5/netCDF4 file."""
-        if self.module == "netCDF4":
-            return self
-
-        self.module = "netCDF4"
-        NcFromYaml.__bases__ = (NcCreate,)
-        return self
-
-    def use_h5py(self: NcFromYaml) -> NcFromYaml:
-        """Use module h5py to generate the HDF5/netCDF4 file."""
-        if self.module == "h5py":
-            return self
-
-        self.module = "h5py"
-        NcFromYaml.__bases__ = (H5Create,)
-        return self

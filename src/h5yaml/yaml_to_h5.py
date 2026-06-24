@@ -18,11 +18,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Initialize empty netCDF4 file using Python package `h5py`."""
+"""Generate a structured HDF5 file without data from YAML file using `h5py`."""
 
 from __future__ import annotations
 
-__all__ = ["H5Create"]
+__all__ = ["YamlToH5"]
 
 import logging
 from pathlib import Path, PosixPath
@@ -32,6 +32,7 @@ import numpy as np
 
 from . import sw_version
 from .lib.adjust_attr import adjust_attr
+from .read_nc_yaml import ReadNcYaml
 
 H5_LIBVER = ("v110", "latest")
 
@@ -42,51 +43,62 @@ def str2bytes(ss: str) -> np.bytes_:
 
 
 # - class definition -----------------------------------
-class H5Create:
-    """Class to create an empty netCDF4 file using Python package `h5py`.
+class YamlToH5(ReadNcYaml):
+    """Class to create a structured HDF5 file without data using Python package `h5py`.
 
     Parameters
     ----------
-    groups: set | None = None
-    compounds: dict | None = None
-    dimensions: dict | None = None
-    variables: dict | None = None
-    attrs_global: dict | None = None
-    attrs_groups: dict | None = None
+    nc_yaml_fl :  Path | str | list[Path | str]
+       YAML files with the template of a netCDF4/HDF5 file
 
     """
 
     str2bytes = False
 
     def __init__(
-        self: H5Create,
-        groups: set | None = None,
-        compounds: dict | None = None,
-        dimensions: dict | None = None,
-        variables: dict | None = None,
-        attrs_global: dict | None = None,
-        attrs_groups: dict | None = None,
+        self: YamlToH5,
+        nc_yaml_fl: Path | str | list[Path | str],
     ) -> None:
-        """Construct a H5Create instance."""
-        self.logger = logging.getLogger("h5yaml.H5Create")
-        self.groups = set() if groups is None else groups
-        self.compounds = {} if compounds is None else compounds
-        self.dimensions = {} if dimensions is None else dimensions
-        self.variables = {} if variables is None else variables
-        self.attrs_global = {} if attrs_global is None else attrs_global
-        self.attrs_groups = {} if attrs_groups is None else attrs_groups
+        """Construct a YamlToH5 instance."""
+        self.logger = logging.getLogger("h5yaml.YamlToH5")
+        super().__init__(nc_yaml_fl)
 
-    def __attrs(self: H5Create, fid: h5py.File) -> None:
-        """Create global and group attributes.
+    def _adjust_attr(
+        self: YamlToH5, dtype: str, attr_key: str, attr_val: np.generic
+    ) -> np.generic:
+        """Return attribute converted to the same data type as its variable.
+
+        Parameters
+        ----------
+        dtype :  str
+           numpy data-type of variable
+        attr_key :  str
+           name of the attribute
+        attr_val :  np.generic
+           original value of the attribute
+
+        Returns
+        -------
+        attr_val converted to dtype
+
+        """
+        res = adjust_attr(dtype, attr_key, attr_val)
+        if self.str2bytes and attr_val == res and isinstance(attr_val, str):
+            return str2bytes(attr_val)
+
+        return res
+
+    def __attrs(self: YamlToH5, fid: h5py.File) -> None:
+        """Attach global attributes to file.
 
         Parameters
         ----------
         fid :  h5py.File
-           HDF5 file pointer (mode 'w' or 'r+')
+           h5py file pointer (mode 'w' or 'r+')
 
         """
         value = (
-            f"h5yaml.{self.__class__.__name__}(H5Create),version={sw_version()}"
+            f"h5yaml.{self.__class__.__name__}(YamlToH5),version={sw_version()}"
             f",{'options=str_as_bytes' if self.str2bytes else ''}"
         )
         fid.attrs["_NCCreator"] = str2bytes(value) if self.str2bytes else value
@@ -100,18 +112,20 @@ class H5Create:
             else:
                 fid.attrs[key] = value
 
-    def __groups(self: H5Create, fid: h5py.File) -> None:
-        """Create groups in HDF5 product.
+    def __groups(self: YamlToH5, fid: h5py.File) -> None:
+        """Create groups in netCDF4/HDF5 product.
 
         Parameters
         ----------
         fid :  h5py.File
-           HDF5 file pointer (mode 'w' or 'r+')
+           h5py file pointer (mode 'w' or 'r+')
 
         """
         for key in self.groups:
             if key not in fid:
                 _ = fid.create_group(key, track_order=True)
+
+        # add group attributes
         for key, value in self.attrs_groups.items():
             if key in fid.attrs or value == "TBW":
                 continue
@@ -122,13 +136,13 @@ class H5Create:
             else:
                 fid[str(Path(key).parent)].attrs[Path(key).name] = value
 
-    def __dimensions(self: H5Create, fid: h5py.File) -> None:
-        """Add dimensions to HDF5 product.
+    def __dimensions(self: YamlToH5, fid: h5py.File) -> None:
+        """Add dimensions to netCDF4/HDF5 product.
 
         Parameters
         ----------
         fid :  h5py.File
-         HDF5 file pointer (mode 'w' or 'r+')
+         h5py file pointer (mode 'w' or 'r+')
 
         """
         for key, val in self.dimensions.items():
@@ -168,21 +182,21 @@ class H5Create:
 
             for attr, attr_val in val.items():
                 if not attr.startswith("_"):
-                    dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
+                    dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
-    def __compounds(self: H5Create, fid: h5py.File) -> None:
-        """Add compound datatypes to HDF5 product.
+    def __compounds(self: YamlToH5, fid: h5py.File) -> None:
+        """Add compound datatypes to netCDF4/HDF5 product.
 
         Parameters
         ----------
         fid :  h5py.File
-           HDF5 file pointer (mode 'w' or 'r+')
+           h5py file pointer (mode 'w' or 'r+')
 
         """
         for key, val in self.compounds.items():
             fid[key] = np.dtype([(k, *v) for k, v in val.items()], align=True)
 
-    def __var_scalar(self: H5Create, fid: h5py.File, key: str, val: dict) -> dict:
+    def __var_scalar(self: YamlToH5, fid: h5py.File, key: str, val: dict) -> dict:
         """Return parameters to create a scalar variable.
 
         Parameters
@@ -206,7 +220,7 @@ class H5Create:
             "fillvalue": fillvalue,
         }
 
-    def __var_nochunk(self: H5Create, fid: h5py.File, key: str, val: dict) -> dict:
+    def __var_nochunk(self: YamlToH5, fid: h5py.File, key: str, val: dict) -> dict:
         """Return parameters to create a variable without chunking.
 
         Parameters
@@ -243,7 +257,7 @@ class H5Create:
             "fillvalue": fillvalue,
         }
 
-    def __var_chunked(self: H5Create, fid: h5py.File, key: str, val: dict) -> dict:
+    def __var_chunked(self: YamlToH5, fid: h5py.File, key: str, val: dict) -> dict:
         """Return parameters to create a variable with chunking.
 
         Parameters
@@ -307,7 +321,7 @@ class H5Create:
         }
 
     def find_dim(
-        self: H5Create, fid: h5py.File, var_name: str, dim_name: str
+        self: YamlToH5, fid: h5py.File, var_name: str, dim_name: str
     ) -> h5py.dataset:
         """Find dimension."""
         for pp in PosixPath(var_name).parents:
@@ -318,13 +332,13 @@ class H5Create:
 
         return fid[dim_path]
 
-    def __variables(self: H5Create, fid: h5py.File) -> None:
-        """Add datasets to HDF5 product.
+    def __variables(self: YamlToH5, fid: h5py.File) -> None:
+        """Add datasets to netCDF4/HDF5 product.
 
         Parameters
         ----------
         fid :  h5py.File
-           HDF5 file pointer (mode 'w' or 'r+')
+           h5py file pointer (mode 'w' or 'r+')
 
         """
         for key, val in self.variables.items():
@@ -353,20 +367,20 @@ class H5Create:
             for attr, attr_val in val.items():
                 if attr.startswith("_"):
                     continue
-                dset.attrs[attr] = adjust_attr(val["_dtype"], attr, attr_val)
+                dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
     def create(
-        self: H5Create,
+        self: YamlToH5,
         filename: Path | str,
         mode: str = "w",
         str_as_bytes: bool = True,
     ) -> None:
-        """Create a HDF5/netCDF4 file (overwrite if exist).
+        """Create a structured netCDF4/HDF5 file on disk (overwrite if exist).
 
         Parameters
         ----------
         filename :  Path | str
-           Full name of the HDF5/netCDF4 file to be generated
+           Full name of the netCDF4/HDF5 file to be generated
         mode :  {"r+", "w", "w-", "a"}, default="w"
            The value of mode is passed to h5py.File, see `h5py` documentation
         str_as_bytes: bool, default=True
@@ -384,8 +398,8 @@ class H5Create:
         except PermissionError as exc:
             raise RuntimeError(f"failed create {filename}") from exc
 
-    def diskless(self: H5Create, str_as_bytes: bool = True) -> h5py.File:
-        """Create a HDF5/netCDF4 file in memory.
+    def diskless(self: YamlToH5, str_as_bytes: bool = True) -> h5py.File:
+        """Create a netCDF4/HDF5 file in memory.
 
         Parameters
         ----------
@@ -398,7 +412,7 @@ class H5Create:
 
         Returns
         -------
-          h5py.File: to add data to the empty HDF5 file
+          h5py.File: to add data to the structured netCDF4/HDF5 file
 
         """
         self.str2bytes = str_as_bytes
@@ -410,7 +424,7 @@ class H5Create:
         self.__attrs(fid)
         return fid
 
-    def to_disk(self: H5Create, fid: h5py.File, filename: Path | str) -> None:
+    def to_disk(self: YamlToH5, fid: h5py.File, filename: Path | str) -> None:
         """Write in-memory buffer to file.
 
         Parameters
@@ -427,3 +441,14 @@ class H5Create:
                 _ = ff.write(fid.id.get_file_image())
         except PermissionError as exc:
             raise RuntimeError(f"failed create {filename}") from exc
+
+
+def main() -> None:
+    """..."""
+    yaml_dir = Path.home() / "git" / "h5_yaml" / "src" / "h5yaml" / "Data"
+    aa = YamlToH5(yaml_dir / "h5_testing.yaml")
+    aa.to_disk(aa.diskless(), "file_h5_create2.h5")
+
+
+if __name__ == "__main__":
+    main()

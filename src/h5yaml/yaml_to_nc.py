@@ -18,11 +18,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Initialize empty netCDF4 file using Python package `netCDF4`."""
+"""Generate a structured netCDF4 file without data from YAML file using `netCDF4`."""
 
 from __future__ import annotations
 
-__all__ = ["NcCreate"]
+__all__ = ["YamlToNc"]
 
 import logging
 from pathlib import Path, PurePosixPath
@@ -34,6 +34,7 @@ from netCDF4 import Dataset
 
 from . import sw_version
 from .lib.adjust_attr import adjust_attr
+from .read_nc_yaml import ReadNcYaml
 
 
 def get_dim_size(fid: Dataset, pkey: PurePosixPath, coord: str) -> int:
@@ -50,40 +51,26 @@ def get_dim_size(fid: Dataset, pkey: PurePosixPath, coord: str) -> int:
 
 
 # - class definition -----------------------------------
-class NcCreate:
+class YamlToNc(ReadNcYaml):
     """Class to create an empty netCDF4 file using Python package `netCDF4`.
 
     Parameters
     ----------
-    groups: set | None = None
-    compounds: dict | None = None
-    dimensions: dict | None = None
-    variables: dict | None = None
-    attrs_global: dict | None = None
-    attrs_groups: dict | None = None
+    nc_yaml_fl :  Path | str | list[Path | str]
+       YAML files with the netCDF4 format definition
 
     """
 
     def __init__(
-        self: NcCreate,
-        groups: set | None = None,
-        compounds: dict | None = None,
-        dimensions: dict | None = None,
-        variables: dict | None = None,
-        attrs_global: dict | None = None,
-        attrs_groups: dict | None = None,
+        self: YamlToNc,
+        nc_yaml_fl: Path | str | list[Path | str],
     ) -> None:
-        """Construct a NcCreate instance."""
-        self.logger = logging.getLogger("h5yaml.NcCreate")
-        self.groups = set() if groups is None else groups
-        self.compounds = {} if compounds is None else compounds
-        self.dimensions = {} if dimensions is None else dimensions
-        self.variables = {} if variables is None else variables
-        self.attrs_global = {} if attrs_global is None else attrs_global
-        self.attrs_groups = {} if attrs_groups is None else attrs_groups
+        """Construct a H5Create instance."""
+        self.logger = logging.getLogger("h5yaml.YamlToNc")
+        super().__init__(nc_yaml_fl)
 
-    def __attrs(self: NcCreate, fid: Dataset) -> None:
-        """Create global and group attributes.
+    def __attrs(self: YamlToNc, fid: Dataset) -> None:
+        """Attach global attributes to file.
 
         Parameters
         ----------
@@ -93,7 +80,7 @@ class NcCreate:
         """
         fid.setncattr(
             "_NCCreator",
-            (f"h5yaml.{self.__class__.__name__}(NcCreate),version={sw_version()}"),
+            (f"h5yaml.{self.__class__.__name__}(YamlToNc),version={sw_version()}"),
         )
         for key, val in self.attrs_global.items():
             if val == "TBW":
@@ -101,7 +88,7 @@ class NcCreate:
 
             fid.setncattr(key, val)
 
-    def __groups(self: NcCreate, fid: Dataset) -> None:
+    def __groups(self: YamlToNc, fid: Dataset) -> None:
         """Create groups in a netCDF4 product.
 
         Parameters
@@ -113,13 +100,14 @@ class NcCreate:
         for key in self.groups:
             _ = fid.createGroup(key)
 
+        # add group attributes
         for key, val in self.attrs_groups.items():
             if val == "TBW":
                 continue
 
             fid[str(Path(key).parent)].setncattr(Path(key).name, val)
 
-    def __dimensions(self: NcCreate, fid: Dataset) -> None:
+    def __dimensions(self: YamlToNc, fid: Dataset) -> None:
         """Add dimensions to a netCDF4 product.
 
         Parameters
@@ -175,7 +163,7 @@ class NcCreate:
             )
 
     def __var_scalar(
-        self: NcCreate, fid: Dataset, key: str, val: dict, compound: None | dict
+        self: YamlToNc, fid: Dataset, key: str, val: dict, compound: None | dict
     ) -> dict:
         """Return parameters to create a scalar variable.
 
@@ -209,7 +197,7 @@ class NcCreate:
         }
 
     def __var_nochunk(
-        self: NcCreate, fid: Dataset, key: str, val: dict, compound: None | dict
+        self: YamlToNc, fid: Dataset, key: str, val: dict, compound: None | dict
     ) -> dict:
         """Return parameters to create a variable without chunking.
 
@@ -245,7 +233,7 @@ class NcCreate:
         }
 
     def __var_chunked(
-        self: NcCreate, fid: Dataset, key: str, val: dict, compound: None | dict
+        self: YamlToNc, fid: Dataset, key: str, val: dict, compound: None | dict
     ) -> dict:
         """Return parameters to create a variable with chunking.
 
@@ -299,7 +287,7 @@ class NcCreate:
             "chunksizes": ds_chunk,
         }
 
-    def __variables(self: NcCreate, fid: Dataset) -> None:
+    def __variables(self: YamlToNc, fid: Dataset) -> None:
         """Add datasets to a netCDF4 product.
 
         Parameters
@@ -353,8 +341,8 @@ class NcCreate:
                 }
             )
 
-    def create(self: NcCreate, filename: Path | str, mode: str = "w") -> None:
-        """Create a netCDF4 file (overwrite if exist).
+    def create(self: YamlToNc, filename: Path | str, mode: str = "w") -> None:
+        """Create a structured netCDF4/HDF5 file on disk (overwrite if exist).
 
         Parameters
         ----------
@@ -373,7 +361,7 @@ class NcCreate:
         except PermissionError as exc:
             raise RuntimeError(f"failed to create {filename}") from exc
 
-    def diskless(self: NcCreate) -> Dataset:
+    def diskless(self: YamlToNc) -> Dataset:
         """Create a netCDF4 file in memory.
 
         Notes
@@ -392,7 +380,7 @@ class NcCreate:
         self.__attrs(fid)
         return fid
 
-    def to_disk(self: NcCreate, fid: Dataset, filename: Path | str) -> None:
+    def to_disk(self: YamlToNc, fid: Dataset, filename: Path | str) -> None:
         """Write in-memory buffer to file, and close the Dataset.
 
         Parameters
@@ -410,3 +398,15 @@ class NcCreate:
             raise RuntimeError(f"failed create {filename}") from exc
         except OSError as exc:
             raise RuntimeError(f"failed to write {filename}") from exc
+
+
+def main() -> None:
+    """..."""
+    yaml_dir = Path.home() / "git" / "h5_yaml" / "src" / "h5yaml" / "Data"
+    aa = YamlToNc(yaml_dir / "nc_testing.yaml")
+
+    aa.to_disk(aa.diskless(), "file_nc_create2.nc")
+
+
+if __name__ == "__main__":
+    main()
