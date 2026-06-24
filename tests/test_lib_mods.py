@@ -96,3 +96,5 @@ class TestAdjustAttr:
         attr_range = [2, 200]
         assert adjust_attr("f8", "valid_range", attr_range).dtype == np.dtype("float64")
         assert adjust_attr("xx", "valid_range", attr_range).dtype == np.dtype("int64")
+
+        assert adjust_attr("str", "long_name", "Dark Flux") == "Dark Flux"

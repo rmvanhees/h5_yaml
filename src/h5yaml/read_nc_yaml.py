@@ -92,8 +92,8 @@ class ReadNcYaml:
         for yaml_fl in nc_yaml_fl if isinstance(nc_yaml_fl, list) else [nc_yaml_fl]:
             try:
                 config = _from_yaml(yaml_fl)
-            except RuntimeError as exc:
-                raise RuntimeError from exc
+            except (FileNotFoundError, RuntimeError) as exc:
+                raise RuntimeError("Fails to access YAML file") from exc
 
             if "groups" in config:
                 self.groups |= set(config["groups"])
@@ -123,3 +123,9 @@ class ReadNcYaml:
             "attrs_global": self.attrs_global,
             "attrs_groups": self.attrs_groups,
         }
+
+    def set_dims(self: ReadNcYaml, dict_dims: dict[str, int]) -> None:
+        """Set undefined (= -1) or unlimited dimension (= 0)."""
+        for key, value in dict_dims.items():
+            if self.dimensions[key]["_size"] <= 0:
+                self.dimensions[key]["_size"] = value

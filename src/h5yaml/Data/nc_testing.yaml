@@ -72,6 +72,9 @@ compounds:
     avg: [f4]
     unc: [f4]
     dark_offs: [f4, [2,]]
+  /group_03/cmpx_dtype:
+    x: [f8]
+    y: [f8]
 
 # Define variables
 variables:
@@ -230,6 +233,7 @@ variables:
   /group_03/ds_11:
     _dtype: f8
     _dims: [number_of_images]
+    _FillValue: NaN
     long_name: double dataset
     units: '1'
     valid_min: -999999.9
@@ -252,3 +256,16 @@ variables:
     _dtype: int
     _dims: [scalar]
     long_name: scalar(int)
+  /group_03/ds_16:
+    _dtype: f8
+    _dims: [scalar]
+    _FillValue: NaN
+    long_name: scalar(float)
+  /group_03/ds_17:
+    _dtype: stats_dtype
+    _dims: [scalar]
+    long_name: scalar(stats_dtype)
+  /group_03/ds_18:
+    _dtype: /group_03/cmpx_dtype
+    _dims: [scalar]
+    long_name: scalar(cmpx_dtype)

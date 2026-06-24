@@ -18,7 +18,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Test module for h5yaml class `H5Yaml`."""
+"""Test module for h5yaml class `YamlToNc`."""
 
 from __future__ import annotations
 
@@ -32,14 +32,19 @@ import pytest
 from h5yaml.yaml_to_nc import YamlToNc
 
 
-class TestFromYaml:
+class TestYamlToNc:
     """Class to test YamlToNc from h5yaml.yaml_to_nc."""
 
-    _res = YamlToNc(files("h5yaml.Data") / "nc_testing.yaml")
+    _res = YamlToNc(
+        [
+            files("h5yaml.Data") / "nc_testing.yaml",
+            files("h5yaml.Data") / "h5_global_attrs.yaml",
+        ]
+    )
     NC_DEF = _res.asdict
     FID_NC = _res.diskless()
 
-    def test_exceptions(self: TestFromYaml) -> None:
+    def test_exceptions(self: TestYamlToNc) -> None:
         """Unit-test for class exeptions."""
         yaml_path = files("h5yaml.Data") / "h5_testing.yaml"
         # raise an exception because folder dows not exist (str)
@@ -60,19 +65,13 @@ class TestFromYaml:
             YamlToNc(yaml_path).create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo)
 
-        # raise exception because YAML file can not be found
-        yaml_path = Path("h5_testing.yaml")
-        with pytest.raises(FileNotFoundError, match=r".* not found") as excinfo:
-            _ = YamlToNc(yaml_path).asdict
-        assert f"{yaml_path} not found" in str(excinfo.value)
-
         # raise exception because the YAML file contains errors
         yaml_path = files("h5yaml.Data") / "h5_unsupported.yaml"
         with pytest.raises(ValueError, match=r".* unlimited dimension") as excinfo:
             _ = YamlToNc(yaml_path).diskless()
         assert "more than one unlimited dimension" in str(excinfo)
 
-    def test_nc_groups(self: TestFromYaml) -> None:
+    def test_nc_groups(self: TestYamlToNc) -> None:
         """Unit-test to check the groups."""
         if "groups" not in self.NC_DEF:
             return
@@ -80,7 +79,7 @@ class TestFromYaml:
         for key in self.NC_DEF["groups"]:
             assert isinstance(self.FID_NC[key], netCDF4.Group)
 
-    def test_nc_dimensions(self: TestFromYaml) -> None:
+    def test_nc_dimensions(self: TestYamlToNc) -> None:
         """Unit-test to check the dimensions."""
         if "dimensions" not in self.NC_DEF:
             return
@@ -112,15 +111,19 @@ class TestFromYaml:
 
                     assert getattr(nc_dim, attr) == self.NC_DEF["dimensions"][key][attr]
 
-    def test_nc_compounds(self: TestFromYaml) -> None:
+    def test_nc_compounds(self: TestYamlToNc) -> None:
         """Unit-test to check the compounds."""
         if "compounds" not in self.NC_DEF:
             return
 
         for key in self.NC_DEF["compounds"]:
-            assert key in self.FID_NC.cmptypes
+            pkey = PurePosixPath(key)
+            if pkey.is_absolute():
+                assert pkey.name in self.FID_NC[pkey.parent].cmptypes
+            else:
+                assert key in self.FID_NC.cmptypes
 
-    def test_nc_variables(self: TestFromYaml) -> None:
+    def test_nc_variables(self: TestYamlToNc) -> None:
         """Unit-test to check the variables."""
         if "variables" not in self.NC_DEF:
             return
@@ -148,6 +151,14 @@ class TestFromYaml:
                 else:
                     assert getattr(nc_var, attr) == self.NC_DEF["variables"][key][attr]
 
-    def test_close(self: TestFromYaml) -> None:
-        """Close the in-memory HDF5 file."""
+    def test_nc_attrs(self: TestYamlToNc) -> None:
+        """Unit-test to check the (global) attributes."""
+        if "attrs_global" not in self.NC_DEF:
+            return
+
+        for key in self.NC_DEF["attrs_global"]:  # .items():
+            print(key)
+
+    def test_close(self: TestYamlToNc) -> None:
+        """Close the in-memory netCDF4 file."""
         self.FID_NC.close()

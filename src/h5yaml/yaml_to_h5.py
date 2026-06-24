@@ -83,7 +83,7 @@ class YamlToH5(ReadNcYaml):
 
         """
         res = adjust_attr(dtype, attr_key, attr_val)
-        if self.str2bytes and attr_val == res and isinstance(attr_val, str):
+        if self.str2bytes and isinstance(attr_val, str) and attr_val == res:
             return str2bytes(attr_val)
 
         return res

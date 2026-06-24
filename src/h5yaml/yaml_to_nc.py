@@ -186,9 +186,17 @@ class YamlToNc(ReadNcYaml):
             cmp_t = np.dtype([(k, *v) for k, v in compound.items()])
             pkey = PurePosixPath(val["_dtype"])
             if pkey.is_absolute():
-                datatype = fid[pkey.parent].createCompoundType(cmp_t, pkey.name)
+                datatype = (
+                    fid[pkey.parent].cmptypes[pkey.name]
+                    if pkey.name in fid[pkey.parent].cmptypes
+                    else fid[pkey.parent].createCompoundType(cmp_t, pkey.name)
+                )
             else:
-                datatype = fid.createCompoundType(cmp_t, val["_dtype"])
+                datatype = (
+                    fid.cmptypes[val["_dtype"]]
+                    if val["_dtype"] in fid.cmptypes
+                    else fid.createCompoundType(cmp_t, val["_dtype"])
+                )
 
         return {
             "varname": key,

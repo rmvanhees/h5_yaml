@@ -1,0 +1,69 @@
+# YAML
+#
+# Definition of the TANGO global attributes (applicable to all products).
+#
+# This file is part of TangoProducts:
+#    https://gitlab.sron.nl/esg/Tango/tango_products.git
+#
+# Copyright (c) 2026 SRON
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
+#
+attrs_global:
+  Conventions: 'CF-1.13, ACDD-1.3'
+  keywords: 'TANGO, CO2, Methane, NO2, greenhouse gases'
+  keywords_vocabulary: CF:netCDF COARDS Climate and Forecast Standard Names
+  naming_authority: zenodo.org
+  standard_name_vocabulary: CF Standard Name Table v79
+  stdname_vocabulary: NetCDF Climate and Forecast (CF) Metadata Convention
+  # Acknowledge various types of support for the project that produced this data. 
+  acknowledgement: TBD
+  # Miscellaneous information about the data, not captured elsewhere.
+  comment: TBD
+  consortium: 'ISISPACE, KNMI, SRON, TNO'
+  # Provides an audit trail for modifications to the original data. 
+  history: TBD
+  id: see attribute /processing_control/software_doi
+  institution: see attribute consortium
+  license: CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0)
+  source: TBW  # as TANGO <instr> Camera
+  mission: Twin Anthropogenic Greenhouse Gas Observers (TANGO)
+  platform: TBW   # as TANGO <instr>
+  # The overarching program(s) of which the dataset is a part. 
+  program: TBD
+  project: TANGO Project
+  instrument: TBW
+  title: TBW   # as TANGO <instr> Level-<level> data
+  identifier_product_doi_authority: https://dx.doi.org/
+  # Request a DOI for TANGO L1A products from Zenodo
+  identifier_product_doi: TBD
+  publisher_type: group
+  publisher_institution: see attribute consortium
+  publisher_name: TANGO consortium
+  publisher_email: TBD
+  publisher_url: TBD
+  product_name: TBW  # should confirm the TANGO filename convention
+  product_version: see attribute processing_version
+  processing_level: TBW
+  processing_version: TBW
+  cdm_target_id: TBW  # a number? TBC
+  cdm_target_type: TBW  # choices: CAL, DRK, SRC, VAL
+  cdm_target_location: TBW  # (<lon>, <lat>)
+  time_coverage_start: TBW
+  time_coverage_end: TBW
+  time_coverage_duration: TBW
+  time_coverage_resolution: TBW
+  geospatial_bounds_crs: EPSG:4326
+  geospatial_lat_resolution: 160 meters
+  geospatial_lat_units: degrees_north
+  geospatial_lon_resolution: 160 meters
+  geospatial_lon_units: degrees_east
+  geospatial_center:  TBW
+  date_created: TBW
+
+attrs_groups:
+  /processing_control/software_description: TANGO L0-L1A processor
+  /processing_control/software_url: https://github.com/rmvanhees/tango_l01a
+  /processing_control/software_version: TBW
+  /processing_control/software_doi: TBD
