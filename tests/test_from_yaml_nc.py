@@ -29,15 +29,15 @@ import netCDF4
 import numpy as np
 import pytest
 
-from h5yaml.nc_from_yaml import NcFromYaml
+from h5yaml.yaml_to_nc import YamlToNc
 
 
 class TestFromYaml:
-    """Class to test H5Yaml from h5yaml.nc_from_yaml_h5."""
+    """Class to test YamlToNc from h5yaml.yaml_to_nc."""
 
-    _res = NcFromYaml(files("h5yaml.Data") / "nc_testing.yaml")
+    _res = YamlToNc(files("h5yaml.Data") / "nc_testing.yaml")
     NC_DEF = _res.asdict
-    FID_NC = _res.use_netcdf4().diskless()
+    FID_NC = _res.diskless()
 
     def test_exceptions(self: TestFromYaml) -> None:
         """Unit-test for class exeptions."""
@@ -45,31 +45,31 @@ class TestFromYaml:
         # raise an exception because folder dows not exist (str)
         l1a_name = "/this/folder/does/not/exists/test.nc"
         with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
-            NcFromYaml(yaml_path).create(l1a_name)
+            YamlToNc(yaml_path).create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo)
 
         # raise an exception because the file can not be created (Path)
         l1a_name = Path("/this/folder/does/not/exists/test.nc")
         with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
-            NcFromYaml(yaml_path).create(l1a_name)
+            YamlToNc(yaml_path).create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo)
 
         # raise exception due to permission error
         l1a_name = "/test.nc"
         with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
-            NcFromYaml(yaml_path).create(l1a_name)
+            YamlToNc(yaml_path).create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo)
 
         # raise exception because YAML file can not be found
         yaml_path = Path("h5_testing.yaml")
         with pytest.raises(FileNotFoundError, match=r".* not found") as excinfo:
-            _ = NcFromYaml(yaml_path).asdict
+            _ = YamlToNc(yaml_path).asdict
         assert f"{yaml_path} not found" in str(excinfo.value)
 
         # raise exception because the YAML file contains errors
         yaml_path = files("h5yaml.Data") / "h5_unsupported.yaml"
         with pytest.raises(ValueError, match=r".* unlimited dimension") as excinfo:
-            _ = NcFromYaml(yaml_path).diskless()
+            _ = YamlToNc(yaml_path).diskless()
         assert "more than one unlimited dimension" in str(excinfo)
 
     def test_nc_groups(self: TestFromYaml) -> None:

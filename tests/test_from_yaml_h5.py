@@ -18,7 +18,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Test module for h5yaml class `NcFromYaml` using package h5py."""
+"""Test module for h5yaml class `YamlToH5` using package h5py."""
 
 from __future__ import annotations
 
@@ -28,13 +28,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from h5yaml.nc_from_yaml import NcFromYaml
+from h5yaml.yaml_to_h5 import YamlToH5
 
 
 class TestFromYaml:
-    """Class to test H5Yaml from h5yaml.nc_from_yaml_h5."""
+    """Class to test YamlToH5 from h5yaml.yaml_to_h5."""
 
-    _res = NcFromYaml(files("h5yaml.Data") / "h5_testing.yaml")
+    _res = YamlToH5(files("h5yaml.Data") / "h5_testing.yaml")
     H5_DEF = _res.asdict
     FID_H5 = _res.diskless(str_as_bytes=False)
 
@@ -44,31 +44,31 @@ class TestFromYaml:
         # raise an exception because folder dows not exist (str)
         l1a_name = "/this/folder/does/not/exists/test.h5"
         with pytest.raises(FileNotFoundError, match=r"[Errno 2] .*") as excinfo:
-            NcFromYaml(yaml_path).create(l1a_name)
+            YamlToH5(yaml_path).create(l1a_name)
         assert "FileNotFoundError" in str(excinfo)
 
         # raise an exception because the file can not be created (Path)
         l1a_name = Path("/this/folder/does/not/exists/test.h5")
         with pytest.raises(FileNotFoundError, match=r"[Errno 2] .*") as excinfo:
-            NcFromYaml(yaml_path).create(l1a_name)
+            YamlToH5(yaml_path).create(l1a_name)
         assert "'No such file or directory" in str(excinfo)
 
         # raise exception due to permission error
         l1a_name = "/test.h5"
         with pytest.raises(RuntimeError, match=r"failed create .*") as excinfo:
-            NcFromYaml(yaml_path).create(l1a_name)
+            YamlToH5(yaml_path).create(l1a_name)
         assert f"failed create {l1a_name}" in str(excinfo.value)
 
         # raise exception because YAML file can not be found
         yaml_path = Path("h5_testing.yaml")
         with pytest.raises(FileNotFoundError, match=r".* not found") as excinfo:
-            _ = NcFromYaml(yaml_path).asdict
+            _ = YamlToH5(yaml_path).asdict
         assert f"{yaml_path} not found" in str(excinfo.value)
 
         # raise exception because the YAML file contains errors
         yaml_path = files("h5yaml.Data") / "h5_unsupported.yaml"
         with pytest.raises(ValueError, match=r".* unlimited dimension") as excinfo:
-            _ = NcFromYaml(yaml_path).diskless()
+            _ = YamlToH5(yaml_path).diskless()
         assert "has more than one unlimited dimension" in str(excinfo.value)
 
     def test_h5_groups(self: TestFromYaml) -> None:
