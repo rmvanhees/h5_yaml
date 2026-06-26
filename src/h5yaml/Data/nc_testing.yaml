@@ -260,6 +260,7 @@ variables:
     _dtype: f8
     _dims: [scalar]
     _FillValue: NaN
+    _values: 3.141592653589793
     long_name: scalar(float)
   /group_03/ds_17:
     _dtype: stats_dtype
