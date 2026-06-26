@@ -45,7 +45,7 @@ attrs_global:
   publisher_url: TBD
   product_name: TBW  # should confirm the TANGO filename convention
   product_version: see attribute processing_version
-  processing_level: TBW
+  processing_level: 1
   processing_version: TBW
   cdm_target_id: TBW  # a number? TBC
   cdm_target_type: TBW  # choices: CAL, DRK, SRC, VAL
@@ -67,3 +67,4 @@ attrs_groups:
   /processing_control/software_url: https://github.com/rmvanhees/tango_l01a
   /processing_control/software_version: TBW
   /processing_control/software_doi: TBD
+  /processing_control/input_parameters/attr_number: 12345

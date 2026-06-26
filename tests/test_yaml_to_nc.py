@@ -51,7 +51,7 @@ class TestYamlToNc:
         # raise an exception because netCDF4 can not have vlen of compound data
         with pytest.raises(ValueError, match=r".*vlen with compounds") as excinfo:
             YamlToNc(yaml_path).diskless()
-        assert f"vlen with compounds" in str(excinfo)
+        assert "vlen with compounds" in str(excinfo)
 
         # raise an exception because folder dows not exist (str)
         l1a_name = "/this/folder/does/not/exists/test.nc"
@@ -80,9 +80,9 @@ class TestYamlToNc:
         # run a sucessful test with method create()
         yaml_path = files("h5yaml.Data") / "nc_testing.yaml"
         l1a_name = Path("tmp_test.nc")
-        _ = YamlToNc(yaml_path).create(l1a_name)
+        YamlToNc(yaml_path).create(l1a_name)
         l1a_name.unlink()
-        
+
         # run successful and failing tests with method to_disk()
         res = YamlToNc(yaml_path)
         res.to_disk(res.diskless(), l1a_name)
@@ -97,7 +97,6 @@ class TestYamlToNc:
         with pytest.raises(RuntimeError, match=r"failed to write .*") as excinfo:
             res.to_disk(res.diskless(), l1a_name)
         assert f"failed to write {l1a_name}" in str(excinfo)
-        
 
     def test_nc_groups(self: TestYamlToNc) -> None:
         """Unit-test to check the groups."""

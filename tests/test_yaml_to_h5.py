@@ -60,15 +60,36 @@ class TestYamlToH5:
 
         # raise exception due to permission error
         l1a_name = "/test.h5"
-        with pytest.raises(RuntimeError, match=r"failed create .*") as excinfo:
+        with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
             YamlToH5(yaml_path).create(l1a_name)
-        assert f"failed create {l1a_name}" in str(excinfo.value)
+        assert f"failed to create {l1a_name}" in str(excinfo.value)
 
         # raise exception because the YAML file contains errors
         yaml_path = files("h5yaml.Data") / "h5_unsupported.yaml"
         with pytest.raises(ValueError, match=r".* unlimited dimension") as excinfo:
             _ = YamlToH5(yaml_path).diskless()
         assert "has more than one unlimited dimension" in str(excinfo.value)
+
+        # run a sucessful test with method create()
+        yaml_path = files("h5yaml.Data") / "h5_testing.yaml"
+        l1a_name = Path("tmp_test.h5")
+        YamlToH5(yaml_path).create(l1a_name)
+        l1a_name.unlink()
+
+        # run successful and failing tests with method to_disk()
+        res = YamlToH5(yaml_path)
+        res.to_disk(res.diskless(), l1a_name)
+        l1a_name.unlink()
+        # raise exception due to permission error
+        l1a_name = Path("/test.h5")
+        with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
+            res.to_disk(res.diskless(), l1a_name)
+        assert f"failed to create {l1a_name}" in str(excinfo)
+        # raise an exception because path to file does not exist
+        l1a_name = Path("/this/folder/does/not/exists/test.h5")
+        with pytest.raises(FileNotFoundError, match=r"[Errno 2] .*") as excinfo:
+            res.to_disk(res.diskless(), l1a_name)
+        assert "No such file or directory" in str(excinfo)
 
     def test_h5_groups(self: TestYamlToH5) -> None:
         """Unit-test to check the groups."""

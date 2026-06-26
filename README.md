@@ -5,13 +5,15 @@
 [![image](https://img.shields.io/pypi/status/h5yaml.svg?label=status)](https://pypi.org/project/h5_yaml/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
+
 ## Description
+
 This Python package let you design the abstract data model of your [HDF5](https://docs.h5py.org/en/stable/)/[netCDF4](https://unidata.github.io/netcdf4-python/) files.
 Where the Abstract Data Model is a conceptual model of data, data types, and data organization. We choose the human-readable data serialization language [YAML](https://yaml.org/) to define the Abstract Data Model with the following components:
 
  * *Groups* which define its Hierarchical structure
- * *Variables* the datasets to hold your data
  * *Dimensions* the size(s) of the variables
+ * *Variables* the datasets to hold your data
  * *Attributes* the meta data of the *File*, *Groups*, or *Variables*
 
 From the YAML files, you can create HDF5 or netCDF4 files, which are small because the Variables may still be empty. Thus the abstract data model and storage model can be shared among your colleagues for review, or for metadata compliance checks. For example the [CF conventions](https://cfconventions.org/) or the [ACDD](https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3), by using:
@@ -19,27 +21,25 @@ From the YAML files, you can create HDF5 or netCDF4 files, which are small becau
  * https://mcc.podaac.earthdatacloud.nasa.gov
 
 And finally, you can implement the file-structure in JAVA, C++ or Fortran.
-But of course you can also simply generate the empty products and fill the dataset using Python.
+But of course you can also simply generate the empty products and fill the datasets using Python.
 
 In short, this approach has the following advantages:
 
- * you define the layout of your HDF5/netCDF4 file using YAML which is human-readable
- and has intuitive syntax.
- * you can reuse the YAML configuration file to to have all your product have a
- consistent layout.
+ * you define the layout of your HDF5/netCDF4 file using YAML which is human-readable and has intuitive syntax.
+ * you can reuse the YAML configuration file to to have all your product have a consistent layout.
  * you can make updates by only changing the YAML configuration file.
- * you can have the layout of your HDF5/netCDF4 file as a Python dictionary, thus
- without accessing any HDF5/netCDF4 file.
+ * you can have the layout of your HDF5/netCDF4 file as a Python dictionary, thus without accessing any HDF5/netCDF4 file.
 
-The `H5YAML` package provides the classes `H5Create` and `NcCreate` to generate a HDF5/netCDF4 formatted file from a Python dictionary.
+The package `h5yaml` provides the classes `YamlToH5` and `YamlToNc` to generate a HDF5/netCDF4 formatted file from a Python dictionary.
 
- 1. The class `H5Create` uses the [h5py](https://pypi.org/project/h5py/) package, which is a Pythonic interface to
+ 1. The class `YamlToH5` uses the [h5py](https://pypi.org/project/h5py/) package, which is a Pythonic interface to
     the HDF5 binary data format. The generated HDF5 file should be compatible with the netCDF4 format.
-    H5Create is faster than the netCDF4 implementation and generates smaller files.
- 3. The class `NcCreate` uses the [netCDF4](https://pypi.org/project/netCDF4/) package, which provides an object-oriented
+    YamlToH5 is slightly faster than the netCDF4 implementation and generates smaller files.
+ 2. The class `YamlToNc` uses the [netCDF4](https://pypi.org/project/netCDF4/) package, which provides an object-oriented
     python interface to the netCDF version 4 library. You should use this class when strict conformance with the netCDF4 format
     is required. However, package `netCDF4` has some limitations, which `h5py` has not, for example it does
     not allow variable-length variables to have a compound data-type.
+ 3. Both classes inherit the class ReadNcYaml, which read the Yaml files and combine the data in to a Python dictionary.
 
 ## Installation
 The package `h5yaml` is available from PyPI. To install it use `pip`:
@@ -48,34 +48,67 @@ The package `h5yaml` is available from PyPI. To install it use `pip`:
 
 The module `h5yaml` requires Python3.10+ and Python modules: h5py (v3.14+), netCDF4 (v1.7+) and numpy (v2.0+).
 
-**Note**: the packages `h5py` and `netCDF4` come with their own HDF5 libraries. If these are different then they may
-collide and result in a *''HDF5 error''*.
-If this is the case then you have to install the development packages of HDF5 and netCDF4 (or compile them from source).
-And reinstall `h5py` and `netCDF4` using the commands:
-
-> $ pip uninstall h5py; pip install --no-binary=h5py h5py
-> $ pip uninstall netCDF4; pip install --no-binary=netCDF4 netCDF4
 
 ## Usage
 
-The class `NcFromYaml` can be used to generate netCDF4 files using the Python packages `h5py` (default) or `netCDF4`
-where a YAML file is used to define the layout of the netCDF4 file.
+Example 1) Use the class `YamlToNc` to generate a template netCDF4 file:
 ```
 from importlib.resources import files
 
-from h5yaml.nc_from_yaml import NcFromYaml
+from h5yaml.yaml_to_nc import YamlToNc
 
-res = NcFromYaml(files("h5yaml.Data") / "nc_testing.yaml")
+yaml_list = [
+   files("h5yaml.Data") / "nc_testing.yaml"),
+   files("h5yaml.Data") / "h5_global_attrs.yaml",
+]
+\# show the YAML configuration as a Python dictionary using pprint
+aa = ReadNcYaml(yaml_list)
+print(repr(aa))
+
+\# generate an in-memory HDF5 file
+aa = YamlToNc(yaml_list)
+fid = aa.diskless()
+
+\# Optional, set any unlimited dimension to a fixed length
+aa.set_dims()
+
+\# write data to datasets of the file
+\# ...
+
+\# write netCDF4 file to disk
+res.to_disk(fid, filename)
+```
+
+Example 2) Use the class `YamlToH5` to generate a template HDF5 file:
+```
+from importlib.resources import files
+
+from h5yaml.yaml_to_h5 import YamlToH5
+
+yaml_list = [
+   files("h5yaml.Data") / "h5_testing.yaml"),
+   files("h5yaml.Data") / "h5_global_attrs.yaml",
+]
+
 # show the YAML configuration as a Python dictionary using pprint
-print(res)
+aa = ReadNcYaml(yaml_list)
+print(repr(aa))
+
 # generate an in-memory HDF5 file
-fid = res.diskless()
+aa = YamlToH5(yaml_list)
+fid = aa.diskless()
+
+# Optional, set any unlimited dimension to a fixed length
+aa.set_dims()
+
 # write data to datasets of the file
 # ...
+
 # write HDF5 file to disk
 res.to_disk(fid, filename)
 ```
-In the next example, we use the Python package `netCDF4` and write the file directly to disk:
+
+Example 3) Use the class `YamlToH5` to generate a template netCDF4 file on disk and add data later.
 ```
 from importlib.resources import files
 
@@ -83,11 +116,10 @@ from netCDF4 import Dataset
 
 from h5yaml.nc_from_yaml import NcFromYaml
 
-res = NcFromYaml(files("h5yaml.Data") / "nc_testing.yaml")
-# use package `netCDF4` and write the file to disk
-res.use_netcdf4().create(filename)
+res = YamlToNc(files("h5yaml.Data") / "nc_testing.yaml").create(filename)
 with Dataset(filename, "r+") as fid
   # write data to variables of the file
+  ...
 ```
 
 The YAML file should be structured as follows:

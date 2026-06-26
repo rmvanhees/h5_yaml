@@ -34,12 +34,25 @@ from . import sw_version
 from .lib.adjust_attr import adjust_attr
 from .read_nc_yaml import ReadNcYaml
 
+# - global parameters ---------------------------------
 H5_LIBVER = ("v110", "latest")
 
 
+# - local function -------------------------------------
 def str2bytes(ss: str) -> np.bytes_:
     """Convert Python string to ASCII encoded bytes."""
     return np.array(ss, dtype=h5py.string_dtype("ascii", len(ss)))
+
+
+def find_dimension(fid: h5py.File, var_name: str, dim_name: str) -> h5py.dataset:
+    """Find dimension in HDF5 file."""
+    for pp in PosixPath(var_name).parents:
+        if (dim_path := str(pp / dim_name)) in fid:
+            break
+    else:
+        raise ValueError(f"Dimension '{dim_name}' not found in file")
+
+    return fid[dim_path]
 
 
 # - class definition -----------------------------------
@@ -238,7 +251,7 @@ class YamlToH5(ReadNcYaml):
         n_udim = 0
         ds_shape = ()
         for coord in val["_dims"]:
-            dim_sz = self.find_dim(fid, key, coord).size
+            dim_sz = find_dimension(fid, key, coord).size
             n_udim += int(dim_sz == 0)
             ds_shape += (dim_sz,)
 
@@ -276,7 +289,7 @@ class YamlToH5(ReadNcYaml):
         ds_shape = ()
         ds_maxshape = ()
         for coord in val["_dims"]:
-            dim_sz = self.find_dim(fid, key, coord).size
+            dim_sz = find_dimension(fid, key, coord).size
             n_udim += int(dim_sz == 0)
             ds_shape += (dim_sz,)
             ds_maxshape += (dim_sz if dim_sz > 0 else None,)
@@ -320,18 +333,6 @@ class YamlToH5(ReadNcYaml):
             "fillvalue": fillvalue,
         }
 
-    def find_dim(
-        self: YamlToH5, fid: h5py.File, var_name: str, dim_name: str
-    ) -> h5py.dataset:
-        """Find dimension."""
-        for pp in PosixPath(var_name).parents:
-            if (dim_path := str(pp / dim_name)) in fid:
-                break
-        else:
-            raise ValueError(f"Dimension '{dim_name}' not found in file")
-
-        return fid[dim_path]
-
     def __variables(self: YamlToH5, fid: h5py.File) -> None:
         """Add datasets to netCDF4/HDF5 product.
 
@@ -353,11 +354,11 @@ class YamlToH5(ReadNcYaml):
 
                 # add dimension scales
                 for ii, coord in enumerate(val["_dims"]):
-                    dset.dims[ii].attach_scale(self.find_dim(fid, key, coord))
+                    dset.dims[ii].attach_scale(find_dimension(fid, key, coord))
 
             # write data to dataset
             if "_values" in val:
-                dset[:] = val["_values"]
+                dset[()] = val["_values"]
 
             # set attribute _FillValue
             if "_FillValue" in val and dset.fillvalue is not None:
@@ -396,7 +397,7 @@ class YamlToH5(ReadNcYaml):
                 self.__variables(fid)
                 self.__attrs(fid)
         except PermissionError as exc:
-            raise RuntimeError(f"failed create {filename}") from exc
+            raise RuntimeError(f"failed to create {filename}") from exc
 
     def diskless(self: YamlToH5, str_as_bytes: bool = True) -> h5py.File:
         """Create a netCDF4/HDF5 file in memory.
@@ -440,9 +441,10 @@ class YamlToH5(ReadNcYaml):
             with open(filename, "wb") as ff:
                 _ = ff.write(fid.id.get_file_image())
         except PermissionError as exc:
-            raise RuntimeError(f"failed create {filename}") from exc
+            raise RuntimeError(f"failed to create {filename}") from exc
 
 
+# no cover: start
 def main() -> None:
     """..."""
     yaml_dir = Path.home() / "git" / "h5_yaml" / "src" / "h5yaml" / "Data"
@@ -452,3 +454,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+# no cover: stop

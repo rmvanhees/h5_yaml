@@ -73,6 +73,10 @@ compounds:
     unc: [f4]
     dark_offs: [f4, [2,]]
 
+  /group_03/cmpx_dtype:
+    x: [f8]
+    y: [f8]
+
 # Define variables
 variables:
   # ---------- GROUP 00 ----------
@@ -267,3 +271,17 @@ variables:
     _dtype: int
     _dims: [scalar]
     long_name: scalar(int)
+  /group_03/ds_16:
+    _dtype: f8
+    _dims: [scalar]
+    _FillValue: NaN
+    _values: 3.141592653589793
+    long_name: scalar(float)
+  /group_03/ds_17:
+    _dtype: stats_dtype
+    _dims: [scalar]
+    long_name: scalar(stats_dtype)
+  /group_03/ds_18:
+    _dtype: /group_03/cmpx_dtype
+    _dims: [scalar]
+    long_name: scalar(cmpx_dtype)

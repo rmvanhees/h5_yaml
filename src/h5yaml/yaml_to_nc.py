@@ -399,8 +399,7 @@ class YamlToNc(ReadNcYaml):
             raise RuntimeError(f"failed to write {filename}") from exc
 
 
-
-def main() -> None: # no cover: start
+def main() -> None:  # no cover: start
     """..."""
     yaml_dir = Path.home() / "git" / "h5_yaml" / "src" / "h5yaml" / "Data"
     aa = YamlToNc(yaml_dir / "nc_testing.yaml")
@@ -409,4 +408,4 @@ def main() -> None: # no cover: start
 
 
 if __name__ == "__main__":
-    main() # no cover: stop
+    main()  # no cover: stop
