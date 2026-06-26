@@ -75,11 +75,19 @@ distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.d{build_date:%Y%m%d}"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-addopts = "--import-mode=importlib --cov=h5yaml --cov-report=xml --cov-report=term --cov-report=term-missing"
+addopts = "--import-mode=importlib --cov=h5yaml --cov-report=term"
 strict = true
 
 [tool.coverage.run]
 # branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_also = [
+    # 1. Comments to turn coverage on and off:
+    'no cover: start(?s:.)*?no cover: stop',
+]
 
 [tool.ruff]
 line-length = 88
