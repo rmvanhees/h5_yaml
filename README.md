@@ -61,21 +61,21 @@ yaml_list = [
    files("h5yaml.Data") / "nc_testing.yaml"),
    files("h5yaml.Data") / "h5_global_attrs.yaml",
 ]
-\# show the YAML configuration as a Python dictionary using pprint
+# show the YAML configuration as a Python dictionary using pprint
 aa = ReadNcYaml(yaml_list)
 print(repr(aa))
 
-\# generate an in-memory HDF5 file
+# generate an in-memory HDF5 file
 aa = YamlToNc(yaml_list)
 fid = aa.diskless()
 
-\# Optional, set any unlimited dimension to a fixed length
+# Optional, set any unlimited dimension to a fixed length
 aa.set_dims()
 
-\# write data to datasets of the file
-\# ...
+# write data to datasets of the file
+# ...
 
-\# write netCDF4 file to disk
+# write netCDF4 file to disk
 res.to_disk(fid, filename)
 ```
 
