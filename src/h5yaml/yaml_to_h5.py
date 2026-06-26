@@ -180,7 +180,7 @@ class YamlToH5(ReadNcYaml):
                     fillvalue=fillvalue,
                 )
                 if "_values" in val:
-                    dset[:] = val["_values"]
+                    dset[:] = np.array(val["_values"], dtype=val["_dtype"])
                 elif "_range" in val:
                     dset[:] = np.arange(*val["_range"], dtype=val["_dtype"])
 
@@ -346,6 +346,10 @@ class YamlToH5(ReadNcYaml):
             # create variable
             if val["_dims"][0] == "scalar":
                 dset = fid.create_dataset(**self.__var_scalar(fid, key, val))
+
+                # write data to dataset (works currently only for scalar datasets)
+                if "_values" in val:
+                    dset[()] = val["_values"]
             else:
                 if val.get("_chunks") == "contiguous":
                     dset = fid.create_dataset(**self.__var_nochunk(fid, key, val))
@@ -355,10 +359,6 @@ class YamlToH5(ReadNcYaml):
                 # add dimension scales
                 for ii, coord in enumerate(val["_dims"]):
                     dset.dims[ii].attach_scale(find_dimension(fid, key, coord))
-
-            # write data to dataset
-            if "_values" in val:
-                dset[()] = val["_values"]
 
             # set attribute _FillValue
             if "_FillValue" in val and dset.fillvalue is not None:

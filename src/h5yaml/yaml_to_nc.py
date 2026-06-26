@@ -169,7 +169,7 @@ class YamlToNc(ReadNcYaml):
                 )
             if value["_size"] > 0:
                 if "_values" in value:
-                    dset[:] = np.array(value["_values"])
+                    dset[:] = np.array(value["_values"], dtype=value["_dtype"])
                 elif "_range" in value:
                     dset[:] = np.arange(*value["_range"], dtype=value["_dtype"])
 
@@ -308,6 +308,9 @@ class YamlToNc(ReadNcYaml):
                 dset = var_grp.createVariable(
                     **self.__var_scalar(fid, var_name, val, compound)
                 )
+                # write data to variable (works currently only for scalar datasets)
+                if "_values" in val:
+                    dset[:] = val["_values"]
             else:
                 # check number of unlimited dimensions
                 n_udim = 0
@@ -326,10 +329,6 @@ class YamlToNc(ReadNcYaml):
                     dset = var_grp.createVariable(
                         **self.__var_chunked(fid, var_name, val, compound)
                     )
-
-            # write data to dataset
-            if "_values" in val:
-                dset[:] = val["_values"]
 
             # add user-supplied attributes
             dset.setncatts(
