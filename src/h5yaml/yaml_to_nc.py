@@ -37,6 +37,7 @@ from .lib.adjust_attr import adjust_attr
 from .read_nc_yaml import ReadNcYaml
 
 
+# - local function -------------------------------------
 def get_dim_size(fid: Dataset, pkey: PurePosixPath, coord: str) -> int:
     """Get size of variable dimension."""
     if coord in fid.dimensions:
@@ -48,6 +49,24 @@ def get_dim_size(fid: Dataset, pkey: PurePosixPath, coord: str) -> int:
                 return fid[pp].dimensions[coord].size
 
     raise ValueError(f"Dimension '{coord}'not found in file")
+
+
+def get_cmp_dtype(fid: Dataset, compound: dict, val: dict) -> np.dtype:
+    """Get netCDF4 compound data-type."""
+    cmp_t = np.dtype([(k, *v) for k, v in compound.items()])
+    pkey = PurePosixPath(val["_dtype"])
+    if pkey.is_absolute():
+        return (
+            fid[pkey.parent].cmptypes[pkey.name]
+            if pkey.name in fid[pkey.parent].cmptypes
+            else fid[pkey.parent].createCompoundType(cmp_t, pkey.name)
+        )
+
+    return (
+        fid.cmptypes[val["_dtype"]]
+        if val["_dtype"] in fid.cmptypes
+        else fid.createCompoundType(cmp_t, val["_dtype"])
+    )
 
 
 # - class definition -----------------------------------
@@ -181,26 +200,11 @@ class YamlToNc(ReadNcYaml):
         if compound is None and "_FillValue" in val:
             fillvalue = np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
 
-        datatype = val["_dtype"]
-        if compound is not None:
-            cmp_t = np.dtype([(k, *v) for k, v in compound.items()])
-            pkey = PurePosixPath(val["_dtype"])
-            if pkey.is_absolute():
-                datatype = (
-                    fid[pkey.parent].cmptypes[pkey.name]
-                    if pkey.name in fid[pkey.parent].cmptypes
-                    else fid[pkey.parent].createCompoundType(cmp_t, pkey.name)
-                )
-            else:
-                datatype = (
-                    fid.cmptypes[val["_dtype"]]
-                    if val["_dtype"] in fid.cmptypes
-                    else fid.createCompoundType(cmp_t, val["_dtype"])
-                )
-
         return {
             "varname": key,
-            "datatype": datatype,
+            "datatype": (
+                val["_dtype"] if compound is None else get_cmp_dtype(fid, compound, val)
+            ),
             "fill_value": fillvalue,
         }
 
@@ -223,18 +227,11 @@ class YamlToNc(ReadNcYaml):
         if compound is None and "_FillValue" in val:
             fillvalue = np.nan if val["_FillValue"] == "NaN" else int(val["_FillValue"])
 
-        datatype = val["_dtype"]
-        if compound is not None:
-            cmp_t = np.dtype([(k, *v) for k, v in compound.items()])
-            pkey = PurePosixPath(val["_dtype"])
-            if pkey.is_absolute():
-                datatype = fid[pkey.parent].createCompoundType(cmp_t, pkey.name)
-            else:
-                datatype = fid.createCompoundType(cmp_t, val["_dtype"])
-
         return {
             "varname": key,
-            "datatype": datatype,
+            "datatype": (
+                val["_dtype"] if compound is None else get_cmp_dtype(fid, compound, val)
+            ),
             "dimensions": val["_dims"],
             "contiguous": True,
             "fill_value": fillvalue,
@@ -270,15 +267,9 @@ class YamlToNc(ReadNcYaml):
         if ds_chunk is not None:
             ds_chunk = None if isinstance(ds_chunk, bool) else tuple(ds_chunk)
 
-        datatype = val["_dtype"]
-        if compound is not None:
-            cmp_t = np.dtype([(k, *v) for k, v in compound.items()])
-            pkey = PurePosixPath(val["_dtype"])
-            if pkey.is_absolute():
-                datatype = fid[pkey.parent].createCompoundType(cmp_t, pkey.name)
-            else:
-                datatype = fid.createCompoundType(cmp_t, val["_dtype"])
-
+        datatype = (
+            val["_dtype"] if compound is None else get_cmp_dtype(fid, compound, val)
+        )
         if "_vlen" in val:
             if val["_dtype"] in fid.cmptypes:
                 raise ValueError("can not have vlen with compounds")
@@ -403,12 +394,13 @@ class YamlToNc(ReadNcYaml):
             with open(filename, "wb") as ff:
                 _ = ff.write(fid.close())
         except PermissionError as exc:
-            raise RuntimeError(f"failed create {filename}") from exc
+            raise RuntimeError(f"failed to create {filename}") from exc
         except OSError as exc:
             raise RuntimeError(f"failed to write {filename}") from exc
 
 
-def main() -> None:
+
+def main() -> None: # no cover: start
     """..."""
     yaml_dir = Path.home() / "git" / "h5_yaml" / "src" / "h5yaml" / "Data"
     aa = YamlToNc(yaml_dir / "nc_testing.yaml")
@@ -417,4 +409,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main() # no cover: stop
