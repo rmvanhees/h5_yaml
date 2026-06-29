@@ -82,7 +82,7 @@ class Template:
     def __init__(
         self: Template,
         nc_yaml: list[Path | str] | Path | str | None,
-        nc_dict: dict[str, dict] | None,
+        nc_dict: dict[str, dict] | None = None,
     ) -> None:
         """Construct a Template instance."""
         if nc_yaml is not None:

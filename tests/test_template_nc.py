@@ -18,7 +18,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Test module for h5yaml class `YamlToNc`."""
+"""Test module for h5yaml class `TemplateNc`."""
 
 from __future__ import annotations
 
@@ -29,13 +29,13 @@ import netCDF4
 import numpy as np
 import pytest
 
-from h5yaml.yaml_to_nc import YamlToNc
+from h5yaml.template_nc import TemplateNc
 
 
-class TestYamlToNc:
-    """Class to test YamlToNc from h5yaml.yaml_to_nc."""
+class TestTemplateNc:
+    """Class to test TemplateNc from h5yaml.yaml_to_nc."""
 
-    _res = YamlToNc(
+    _res = TemplateNc(
         [
             files("h5yaml.Data") / "nc_testing.yaml",
             files("h5yaml.Data") / "h5_global_attrs.yaml",
@@ -44,47 +44,47 @@ class TestYamlToNc:
     NC_DEF = _res.asdict
     FID_NC = _res.diskless()
 
-    def test_exceptions(self: TestYamlToNc) -> None:
+    def test_exceptions(self: TestTemplateNc) -> None:
         """Unit-test for class exeptions."""
         yaml_path = files("h5yaml.Data") / "h5_testing.yaml"
 
         # raise an exception because netCDF4 can not have vlen of compound data
         with pytest.raises(ValueError, match=r".*vlen with compounds") as excinfo:
-            YamlToNc(yaml_path).diskless()
+            TemplateNc(yaml_path).diskless()
         assert "vlen with compounds" in str(excinfo)
 
         # raise an exception because folder dows not exist (str)
         l1a_name = "/this/folder/does/not/exists/test.nc"
         with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
-            YamlToNc(yaml_path).create(l1a_name)
+            TemplateNc(yaml_path).create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo)
 
         # raise an exception because the file can not be created (Path)
         l1a_name = Path("/this/folder/does/not/exists/test.nc")
         with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
-            YamlToNc(yaml_path).create(l1a_name)
+            TemplateNc(yaml_path).create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo)
 
         # raise exception due to permission error
         l1a_name = "/test.nc"
         with pytest.raises(RuntimeError, match=r"failed to create .*") as excinfo:
-            YamlToNc(yaml_path).create(l1a_name)
+            TemplateNc(yaml_path).create(l1a_name)
         assert f"failed to create {l1a_name}" in str(excinfo)
 
         # raise exception because the YAML file contains errors
         yaml_path = files("h5yaml.Data") / "h5_unsupported.yaml"
         with pytest.raises(ValueError, match=r".* unlimited dimension") as excinfo:
-            _ = YamlToNc(yaml_path).diskless()
+            _ = TemplateNc(yaml_path).diskless()
         assert "more than one unlimited dimension" in str(excinfo)
 
         # run a sucessful test with method create()
         yaml_path = files("h5yaml.Data") / "nc_testing.yaml"
         l1a_name = Path("tmp_test.nc")
-        YamlToNc(yaml_path).create(l1a_name)
+        TemplateNc(yaml_path).create(l1a_name)
         l1a_name.unlink()
 
         # run successful and failing tests with method to_disk()
-        res = YamlToNc(yaml_path)
+        res = TemplateNc(yaml_path)
         res.to_disk(res.diskless(), l1a_name)
         l1a_name.unlink()
         # raise exception due to permission error
@@ -98,7 +98,7 @@ class TestYamlToNc:
             res.to_disk(res.diskless(), l1a_name)
         assert f"failed to write {l1a_name}" in str(excinfo)
 
-    def test_nc_groups(self: TestYamlToNc) -> None:
+    def test_nc_groups(self: TestTemplateNc) -> None:
         """Unit-test to check the groups."""
         if "groups" not in self.NC_DEF:
             return
@@ -106,7 +106,7 @@ class TestYamlToNc:
         for key in self.NC_DEF["groups"]:
             assert isinstance(self.FID_NC[key], netCDF4.Group)
 
-    def test_nc_dimensions(self: TestYamlToNc) -> None:
+    def test_nc_dimensions(self: TestTemplateNc) -> None:
         """Unit-test to check the dimensions."""
         if "dimensions" not in self.NC_DEF:
             return
@@ -138,7 +138,7 @@ class TestYamlToNc:
 
                     assert getattr(nc_dim, attr) == self.NC_DEF["dimensions"][key][attr]
 
-    def test_nc_compounds(self: TestYamlToNc) -> None:
+    def test_nc_compounds(self: TestTemplateNc) -> None:
         """Unit-test to check the compounds."""
         if "compounds" not in self.NC_DEF:
             return
@@ -150,7 +150,7 @@ class TestYamlToNc:
             else:
                 assert key in self.FID_NC.cmptypes
 
-    def test_nc_variables(self: TestYamlToNc) -> None:
+    def test_nc_variables(self: TestTemplateNc) -> None:
         """Unit-test to check the variables."""
         if "variables" not in self.NC_DEF:
             return
@@ -178,7 +178,7 @@ class TestYamlToNc:
                 else:
                     assert getattr(nc_var, attr) == self.NC_DEF["variables"][key][attr]
 
-    def test_nc_attrs(self: TestYamlToNc) -> None:
+    def test_nc_attrs(self: TestTemplateNc) -> None:
         """Unit-test to check the (global) attributes."""
         if "attrs_global" not in self.NC_DEF:
             return
@@ -186,6 +186,6 @@ class TestYamlToNc:
         for key in self.NC_DEF["attrs_global"]:  # .items():
             print(key)
 
-    def test_close(self: TestYamlToNc) -> None:
+    def test_close(self: TestTemplateNc) -> None:
         """Close the in-memory netCDF4 file."""
         self.FID_NC.close()

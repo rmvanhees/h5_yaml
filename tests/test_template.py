@@ -26,32 +26,32 @@ from importlib.resources import files
 
 import pytest
 
-from h5yaml.read_nc_yaml import ReadNcYaml
+from h5yaml.template import Template
 
 
-class TestReadNcYaml:
-    """Class to test ReadNcYaml from h5yaml.read_nc_yaml."""
+class TestTemplate:
+    """Class to test Template from h5yaml.read_nc_yaml."""
 
-    def test_exceptions(self: TestReadNcYaml) -> None:
+    def test_exceptions(self: TestTemplate) -> None:
         """Unit-test for class exeptions."""
-        res = ReadNcYaml(
+        res = Template(
             [
                 files("h5yaml.Data") / "h5_testing.yaml",
                 files("h5yaml.Data") / "h5_global_attrs.yaml",
             ]
         )
-        res = ReadNcYaml(files("h5yaml.Data") / "nc_testing.yaml")
-        res = ReadNcYaml(str(files("h5yaml.Data") / "h5_unsupported.yaml"))
+        res = Template(files("h5yaml.Data") / "nc_testing.yaml")
+        res = Template(str(files("h5yaml.Data") / "h5_unsupported.yaml"))
         assert isinstance(repr(res), str)
 
         # raise exception because YAML file can not be found
         with pytest.raises((FileNotFoundError, RuntimeError)) as excinfo:
-            res = ReadNcYaml(files("h5yaml.Data") / "h5_testing2.yaml")
+            res = Template(files("h5yaml.Data") / "h5_testing2.yaml")
         assert "Fails to access" in str(excinfo)
 
-    def test_set_dims(self: TestReadNcYaml) -> None:
+    def test_set_dims(self: TestTemplate) -> None:
         """Unit-test when unlimited dimensions are fixed."""
-        res = ReadNcYaml([files("h5yaml.Data") / "nc_testing.yaml"])
+        res = Template([files("h5yaml.Data") / "nc_testing.yaml"])
         if not ("time" in res.dimensions and res.dimensions["time"]["_size"] <= 0):
             raise ValueError("Can not test method set_dims()")
         res.set_dims({"time": 128})

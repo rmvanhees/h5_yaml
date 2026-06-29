@@ -41,7 +41,7 @@ import numpy as np
 
 from . import sw_version
 from .lib.adjust_attr import adjust_attr
-from .read_nc_yaml import Template
+from .template import Template
 
 # - global parameters ---------------------------------
 H5_LIBVER = ("v110", "latest")
