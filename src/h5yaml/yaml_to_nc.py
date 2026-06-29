@@ -18,11 +18,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Generate a structured netCDF4 file without data from YAML file using `netCDF4`."""
+"""Generate a template netCDF4 file which contains all mandatory netCDF4 elements.
+
+The template file may contain any of the following netCDF4 elements:
+
+- "groups" to organize the data in hierarchical groups
+- "dimensions" which define the sizes of all variables in terms of dimensions
+- "variables" which behave as much like `numpy` arrays
+- "attributes" which can be attached to the file of one of its groups
+
+"""
 
 from __future__ import annotations
 
-__all__ = ["YamlToNc"]
+__all__ = ["TemplateNc"]
 
 import logging
 from pathlib import Path, PurePosixPath
@@ -34,7 +43,7 @@ from netCDF4 import Dataset
 
 from . import sw_version
 from .lib.adjust_attr import adjust_attr
-from .read_nc_yaml import ReadNcYaml
+from .read_nc_yaml import Template
 
 
 # - local function -------------------------------------
@@ -70,25 +79,30 @@ def get_cmp_dtype(fid: Dataset, compound: dict, val: dict) -> np.dtype:
 
 
 # - class definition -----------------------------------
-class YamlToNc(ReadNcYaml):
-    """Class to create an empty netCDF4 file using Python package `netCDF4`.
+class TemplateNc(Template):
+    """Class to create a template netCDF4 file using Python package `netCDF4`.
 
     Parameters
     ----------
-    nc_yaml_fl :  Path | str | list[Path | str]
-       YAML files with the netCDF4 format definition
+    nc_yaml :  list[Path | str] | Path | str | None, default=None
+       YAML files with the template netCDF4 file definition
+
+    nc_dict :  dict[str, dict] | None, default=None
+       Python dictionary with the template netCDF4 file definition
 
     """
 
     def __init__(
-        self: YamlToNc,
-        nc_yaml_fl: Path | str | list[Path | str],
+        self: TemplateNc,
+        nc_yaml: Path | str | list[Path | str] | None = None,
+        *,
+        nc_dict: dict | None = None,
     ) -> None:
-        """Construct a H5Create instance."""
-        self.logger = logging.getLogger("h5yaml.YamlToNc")
-        super().__init__(nc_yaml_fl)
+        """Construct a TemplateNc instance."""
+        self.logger = logging.getLogger("h5yaml.TemplateNc")
+        super().__init__(nc_yaml, nc_dict)
 
-    def __attrs(self: YamlToNc, fid: Dataset) -> None:
+    def __attrs(self: TemplateNc, fid: Dataset) -> None:
         """Attach global attributes to file.
 
         Parameters
@@ -99,7 +113,7 @@ class YamlToNc(ReadNcYaml):
         """
         fid.setncattr(
             "_NCCreator",
-            (f"h5yaml.{self.__class__.__name__}(YamlToNc),version={sw_version()}"),
+            (f"h5yaml.{self.__class__.__name__}(TemplateNc),version={sw_version()}"),
         )
         for key, val in self.attrs_global.items():
             if val == "TBW":
@@ -107,7 +121,7 @@ class YamlToNc(ReadNcYaml):
 
             fid.setncattr(key, val)
 
-    def __groups(self: YamlToNc, fid: Dataset) -> None:
+    def __groups(self: TemplateNc, fid: Dataset) -> None:
         """Create groups in a netCDF4 product.
 
         Parameters
@@ -126,7 +140,7 @@ class YamlToNc(ReadNcYaml):
 
             fid[str(Path(key).parent)].setncattr(Path(key).name, val)
 
-    def __dimensions(self: YamlToNc, fid: Dataset) -> None:
+    def __dimensions(self: TemplateNc, fid: Dataset) -> None:
         """Add dimensions to a netCDF4 product.
 
         Parameters
@@ -182,7 +196,7 @@ class YamlToNc(ReadNcYaml):
             )
 
     def __var_scalar(
-        self: YamlToNc, fid: Dataset, key: str, val: dict, compound: None | dict
+        self: TemplateNc, fid: Dataset, key: str, val: dict, compound: None | dict
     ) -> dict:
         """Return parameters to create a scalar variable.
 
@@ -209,7 +223,7 @@ class YamlToNc(ReadNcYaml):
         }
 
     def __var_nochunk(
-        self: YamlToNc, fid: Dataset, key: str, val: dict, compound: None | dict
+        self: TemplateNc, fid: Dataset, key: str, val: dict, compound: None | dict
     ) -> dict:
         """Return parameters to create a variable without chunking.
 
@@ -238,7 +252,7 @@ class YamlToNc(ReadNcYaml):
         }
 
     def __var_chunked(
-        self: YamlToNc, fid: Dataset, key: str, val: dict, compound: None | dict
+        self: TemplateNc, fid: Dataset, key: str, val: dict, compound: None | dict
     ) -> dict:
         """Return parameters to create a variable with chunking.
 
@@ -286,7 +300,7 @@ class YamlToNc(ReadNcYaml):
             "chunksizes": ds_chunk,
         }
 
-    def __variables(self: YamlToNc, fid: Dataset) -> None:
+    def __variables(self: TemplateNc, fid: Dataset) -> None:
         """Add datasets to a netCDF4 product.
 
         Parameters
@@ -339,8 +353,8 @@ class YamlToNc(ReadNcYaml):
                 }
             )
 
-    def create(self: YamlToNc, filename: Path | str, mode: str = "w") -> None:
-        """Create a structured netCDF4/HDF5 file on disk (overwrite if exist).
+    def create(self: TemplateNc, filename: Path | str, mode: str = "w") -> None:
+        """Create a structured netCDF4 file on disk (overwrite if exist).
 
         Parameters
         ----------
@@ -359,7 +373,7 @@ class YamlToNc(ReadNcYaml):
         except PermissionError as exc:
             raise RuntimeError(f"failed to create {filename}") from exc
 
-    def diskless(self: YamlToNc) -> Dataset:
+    def diskless(self: TemplateNc) -> Dataset:
         """Create a netCDF4 file in memory.
 
         Notes
@@ -378,7 +392,7 @@ class YamlToNc(ReadNcYaml):
         self.__attrs(fid)
         return fid
 
-    def to_disk(self: YamlToNc, fid: Dataset, filename: Path | str) -> None:
+    def to_disk(self: TemplateNc, fid: Dataset, filename: Path | str) -> None:
         """Write in-memory buffer to file, and close the Dataset.
 
         Parameters
@@ -401,7 +415,7 @@ class YamlToNc(ReadNcYaml):
 def main() -> None:  # no cover: start
     """..."""
     yaml_dir = Path.home() / "git" / "h5_yaml" / "src" / "h5yaml" / "Data"
-    aa = YamlToNc(yaml_dir / "nc_testing.yaml")
+    aa = TemplateNc(yaml_dir / "nc_testing.yaml")
 
     aa.to_disk(aa.diskless(), "file_nc_create2.nc")
 

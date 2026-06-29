@@ -22,7 +22,7 @@
 
 from __future__ import annotations
 
-__all__ = ["ReadNcYaml"]
+__all__ = ["Template"]
 
 import pprint
 from pathlib import Path
@@ -33,7 +33,7 @@ import yaml_include
 
 # - local function -------------------------------------
 def _from_yaml(file_path: Path | str) -> dict:
-    """Read netCDF4/Hdf5 structure from a YAML file.
+    """Read definition of netCDF4/HDF5 elements from a YAML file.
 
     Parameters
     ----------
@@ -67,21 +67,37 @@ def _from_yaml(file_path: Path | str) -> dict:
 
 
 # - class definition -----------------------------------
-class ReadNcYaml:
-    """Class to read and show netCDF4/HDF5 template from YAML configuration file.
+class Template:
+    """Class to obtain netCDF4/HDF5 elements from YAML file(s) or Python dictionary.
 
     Parameters
     ----------
-    nc_yaml_fl :  Path | str | list[Path | str]
-       YAML file(s) with the template of a netCDF4/HDF5 file
+    nc_yaml :  list[Path | str] | Path | str | None
+       YAML file(s) with netCDF4/HDF5 elements
+    nc_dict :  dict[str, dict] | None
+       Python dictionary with netCDF4/HDF5 elements
 
     """
 
     def __init__(
-        self: ReadNcYaml,
-        nc_yaml_fl: Path | str | list[Path | str],
+        self: Template,
+        nc_yaml: list[Path | str] | Path | str | None,
+        nc_dict: dict[str, dict] | None,
     ) -> None:
-        """Construct a ReadNcYaml instance."""
+        """Construct a Template instance."""
+        if nc_yaml is not None:
+            self.from_yaml(nc_yaml)
+        elif nc_dict is not None:
+            self.from_dict(nc_dict)
+        else:
+            self.__unset_attrs__()
+
+    def __repr__(self: Template) -> str:
+        """Show object as dictionary."""
+        return pprint.pformat(self.asdict)
+
+    def __unset_attrs__(self: Template) -> None:
+        """Initialize all class attributes."""
         self.groups = set()
         self.compounds = {}
         self.dimensions = {}
@@ -89,11 +105,30 @@ class ReadNcYaml:
         self.attrs_global = {}
         self.attrs_groups = {}
 
-        for yaml_fl in nc_yaml_fl if isinstance(nc_yaml_fl, list) else [nc_yaml_fl]:
+    def from_dict(self: Template, nc_dict: dict[str, dict]) -> None:
+        """Initialize class attributes from a Python dictionary."""
+        self.__unset_attrs__()
+        if "groups" in nc_dict:
+            self.groups = set(nc_dict["groups"])
+        if "compounds" in nc_dict:
+            self.compounds = nc_dict["compounds"]
+        if "dimensions" in nc_dict:
+            self.dimensions = nc_dict["dimensions"]
+        if "variables" in nc_dict:
+            self.variables = nc_dict["variables"]
+        if "attrs_global" in nc_dict:
+            self.attrs_global = nc_dict["attrs_global"]
+        if "attrs_groups" in nc_dict:
+            self.attrs_groups = nc_dict["attrs_groups"]
+
+    def from_yaml(self: Template, nc_yaml: list[Path | str] | Path | str) -> None:
+        """Initialize class attributes from YAML file(s)."""
+        self.__unset_attrs__()
+        for yaml_file in nc_yaml if isinstance(nc_yaml, list) else [nc_yaml]:
             try:
-                config = _from_yaml(yaml_fl)
+                config = _from_yaml(yaml_file)
             except (FileNotFoundError, RuntimeError) as exc:
-                raise RuntimeError("Fails to access YAML file") from exc
+                raise RuntimeError(f"Fails to access YAML file: {yaml_file}") from exc
 
             if "groups" in config:
                 self.groups |= set(config["groups"])
@@ -108,12 +143,8 @@ class ReadNcYaml:
             if "attrs_groups" in config:
                 self.attrs_groups |= config["attrs_groups"]
 
-    def __repr__(self: ReadNcYaml) -> str:
-        """Show object as dictionary."""
-        return pprint.pformat(self.asdict)
-
     @property
-    def asdict(self: ReadNcYaml) -> dict:
+    def asdict(self: Template) -> dict:
         """Return dictionary with netCDF4/HDF5 elements."""
         return {
             "groups": self.groups,
@@ -124,7 +155,7 @@ class ReadNcYaml:
             "attrs_groups": self.attrs_groups,
         }
 
-    def set_dims(self: ReadNcYaml, dict_dims: dict[str, int]) -> None:
+    def set_dims(self: Template, dict_dims: dict[str, int]) -> None:
         """Set undefined (= -1) or unlimited dimension (= 0)."""
         for key, value in dict_dims.items():
             if self.dimensions[key]["_size"] <= 0:

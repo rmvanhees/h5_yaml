@@ -18,11 +18,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Generate a structured HDF5 file without data from YAML file using `h5py`."""
+"""Generate a template HDF5 file which contains all mandatory HDF5 elements.
+
+The template file may contain any of the following HDF5 elements:
+
+- "groups" to organize the data in hierarchical groups
+- "dimensions" which define the sizes of all variables in terms of dimensions
+- "variables" which behave as much like `numpy` arrays
+- "attributes" which can be attached to the file of one of its groups
+
+"""
 
 from __future__ import annotations
 
-__all__ = ["YamlToH5"]
+__all__ = ["TemplateH5"]
 
 import logging
 from pathlib import Path, PosixPath
@@ -32,7 +41,7 @@ import numpy as np
 
 from . import sw_version
 from .lib.adjust_attr import adjust_attr
-from .read_nc_yaml import ReadNcYaml
+from .read_nc_yaml import Template
 
 # - global parameters ---------------------------------
 H5_LIBVER = ("v110", "latest")
@@ -56,28 +65,33 @@ def find_dimension(fid: h5py.File, var_name: str, dim_name: str) -> h5py.dataset
 
 
 # - class definition -----------------------------------
-class YamlToH5(ReadNcYaml):
-    """Class to create a structured HDF5 file without data using Python package `h5py`.
+class TemplateH5(Template):
+    """Class to create a template netCDF4-compatible file using Python package `h5py`.
 
     Parameters
     ----------
-    nc_yaml_fl :  Path | str | list[Path | str]
-       YAML files with the template of a netCDF4/HDF5 file
+    nc_yaml :  list[Path | str] | Path | str | None, default=None
+       YAML files with the template HDF5 file definition
+
+    nc_dict :  dict[str, dict] | None, default=None
+       Python dictionary with the template HDF5 file definition
 
     """
 
     str2bytes = False
 
     def __init__(
-        self: YamlToH5,
-        nc_yaml_fl: Path | str | list[Path | str],
+        self: TemplateH5,
+        nc_yaml: Path | str | list[Path | str] | None = None,
+        *,
+        nc_dict: dict | None = None,
     ) -> None:
-        """Construct a YamlToH5 instance."""
-        self.logger = logging.getLogger("h5yaml.YamlToH5")
-        super().__init__(nc_yaml_fl)
+        """Construct a TemplateH5 instance."""
+        self.logger = logging.getLogger("h5yaml.TemplateH5")
+        super().__init__(nc_yaml, nc_dict)
 
     def _adjust_attr(
-        self: YamlToH5, dtype: str, attr_key: str, attr_val: np.generic
+        self: TemplateH5, dtype: str, attr_key: str, attr_val: np.generic
     ) -> np.generic:
         """Return attribute converted to the same data type as its variable.
 
@@ -101,7 +115,7 @@ class YamlToH5(ReadNcYaml):
 
         return res
 
-    def __attrs(self: YamlToH5, fid: h5py.File) -> None:
+    def __attrs(self: TemplateH5, fid: h5py.File) -> None:
         """Attach global attributes to file.
 
         Parameters
@@ -111,7 +125,7 @@ class YamlToH5(ReadNcYaml):
 
         """
         value = (
-            f"h5yaml.{self.__class__.__name__}(YamlToH5),version={sw_version()}"
+            f"h5yaml.{self.__class__.__name__}(TemplateH5),version={sw_version()}"
             f",{'options=str_as_bytes' if self.str2bytes else ''}"
         )
         fid.attrs["_NCCreator"] = str2bytes(value) if self.str2bytes else value
@@ -125,8 +139,8 @@ class YamlToH5(ReadNcYaml):
             else:
                 fid.attrs[key] = value
 
-    def __groups(self: YamlToH5, fid: h5py.File) -> None:
-        """Create groups in netCDF4/HDF5 product.
+    def __groups(self: TemplateH5, fid: h5py.File) -> None:
+        """Create groups in HDF5 product.
 
         Parameters
         ----------
@@ -149,8 +163,8 @@ class YamlToH5(ReadNcYaml):
             else:
                 fid[str(Path(key).parent)].attrs[Path(key).name] = value
 
-    def __dimensions(self: YamlToH5, fid: h5py.File) -> None:
-        """Add dimensions to netCDF4/HDF5 product.
+    def __dimensions(self: TemplateH5, fid: h5py.File) -> None:
+        """Add dimensions to HDF5 product.
 
         Parameters
         ----------
@@ -197,8 +211,8 @@ class YamlToH5(ReadNcYaml):
                 if not attr.startswith("_"):
                     dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
-    def __compounds(self: YamlToH5, fid: h5py.File) -> None:
-        """Add compound datatypes to netCDF4/HDF5 product.
+    def __compounds(self: TemplateH5, fid: h5py.File) -> None:
+        """Add compound datatypes to HDF5 product.
 
         Parameters
         ----------
@@ -209,7 +223,7 @@ class YamlToH5(ReadNcYaml):
         for key, val in self.compounds.items():
             fid[key] = np.dtype([(k, *v) for k, v in val.items()], align=True)
 
-    def __var_scalar(self: YamlToH5, fid: h5py.File, key: str, val: dict) -> dict:
+    def __var_scalar(self: TemplateH5, fid: h5py.File, key: str, val: dict) -> dict:
         """Return parameters to create a scalar variable.
 
         Parameters
@@ -233,7 +247,7 @@ class YamlToH5(ReadNcYaml):
             "fillvalue": fillvalue,
         }
 
-    def __var_nochunk(self: YamlToH5, fid: h5py.File, key: str, val: dict) -> dict:
+    def __var_nochunk(self: TemplateH5, fid: h5py.File, key: str, val: dict) -> dict:
         """Return parameters to create a variable without chunking.
 
         Parameters
@@ -270,7 +284,7 @@ class YamlToH5(ReadNcYaml):
             "fillvalue": fillvalue,
         }
 
-    def __var_chunked(self: YamlToH5, fid: h5py.File, key: str, val: dict) -> dict:
+    def __var_chunked(self: TemplateH5, fid: h5py.File, key: str, val: dict) -> dict:
         """Return parameters to create a variable with chunking.
 
         Parameters
@@ -333,8 +347,8 @@ class YamlToH5(ReadNcYaml):
             "fillvalue": fillvalue,
         }
 
-    def __variables(self: YamlToH5, fid: h5py.File) -> None:
-        """Add datasets to netCDF4/HDF5 product.
+    def __variables(self: TemplateH5, fid: h5py.File) -> None:
+        """Add datasets to HDF5 product.
 
         Parameters
         ----------
@@ -371,17 +385,17 @@ class YamlToH5(ReadNcYaml):
                 dset.attrs[attr] = self._adjust_attr(val["_dtype"], attr, attr_val)
 
     def create(
-        self: YamlToH5,
+        self: TemplateH5,
         filename: Path | str,
         mode: str = "w",
         str_as_bytes: bool = True,
     ) -> None:
-        """Create a structured netCDF4/HDF5 file on disk (overwrite if exist).
+        """Create a structured netCDF4-compatible file on disk (overwrite if exist).
 
         Parameters
         ----------
         filename :  Path | str
-           Full name of the netCDF4/HDF5 file to be generated
+           Full name of the HDF5 file to be generated
         mode :  {"r+", "w", "w-", "a"}, default="w"
            The value of mode is passed to h5py.File, see `h5py` documentation
         str_as_bytes: bool, default=True
@@ -399,8 +413,8 @@ class YamlToH5(ReadNcYaml):
         except PermissionError as exc:
             raise RuntimeError(f"failed to create {filename}") from exc
 
-    def diskless(self: YamlToH5, str_as_bytes: bool = True) -> h5py.File:
-        """Create a netCDF4/HDF5 file in memory.
+    def diskless(self: TemplateH5, str_as_bytes: bool = True) -> h5py.File:
+        """Create a template netCDF4-compatible file in memory.
 
         Parameters
         ----------
@@ -413,7 +427,7 @@ class YamlToH5(ReadNcYaml):
 
         Returns
         -------
-          h5py.File: to add data to the structured netCDF4/HDF5 file
+          h5py.File: to add data to the structured HDF5 file
 
         """
         self.str2bytes = str_as_bytes
@@ -425,8 +439,8 @@ class YamlToH5(ReadNcYaml):
         self.__attrs(fid)
         return fid
 
-    def to_disk(self: YamlToH5, fid: h5py.File, filename: Path | str) -> None:
-        """Write in-memory buffer to file.
+    def to_disk(self: TemplateH5, fid: h5py.File, filename: Path | str) -> None:
+        """Write in-memory buffer to disc.
 
         Parameters
         ----------
@@ -448,7 +462,7 @@ class YamlToH5(ReadNcYaml):
 def main() -> None:
     """..."""
     yaml_dir = Path.home() / "git" / "h5_yaml" / "src" / "h5yaml" / "Data"
-    aa = YamlToH5(yaml_dir / "h5_testing.yaml")
+    aa = TemplateH5(yaml_dir / "h5_testing.yaml")
     aa.to_disk(aa.diskless(), "file_h5_create2.h5")
 
 
