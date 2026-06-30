@@ -47,17 +47,33 @@ from .template import Template
 
 
 # - local function -------------------------------------
-def get_dim_size(fid: Dataset, pkey: PurePosixPath, coord: str) -> int:
-    """Get size of variable dimension."""
-    if coord in fid.dimensions:
-        return fid.dimensions[coord].size
+def get_dim_size(fid: Dataset, pkey: PurePosixPath, coord: PurePosixPath) -> int:
+    """Get size of variable dimension.
 
-    if pkey.is_absolute():
-        for pp in pkey.parents:
-            if pp != PurePosixPath("/") and coord in fid[pp].dimensions:
-                return fid[pp].dimensions[coord].size
+    Parameters
+    ----------
+    pkey :  PurePosixPath
+       Full path to the variable
+    coord :  PurePosixPath
+       Name of the dimension or its full path
 
-    raise ValueError(f"Dimension '{coord}'not found in file")
+    """
+    # check if dimension in same group as variable
+    if len(pkey.parents) == len(coord.parents):
+        if len(coord.parents) == 1:
+            return fid.dimensions[coord.name].size
+
+        return fid[coord.parent].dimensions[coord.name].size
+
+    # search dimension on its name
+    dim_name = coord.name
+    for pp in pkey.parents:
+        if pp == PurePosixPath("/") and dim_name in fid.dimensions:
+            return fid.dimensions[dim_name].size
+        if dim_name in fid[pp].dimensions:
+            return fid[pp].dimensions[dim_name].size
+
+    raise ValueError(f"Dimension '{coord}' not found in file")
 
 
 def get_cmp_dtype(fid: Dataset, compound: dict, val: dict) -> np.dtype:
@@ -246,7 +262,7 @@ class TemplateNc(Template):
             "datatype": (
                 val["_dtype"] if compound is None else get_cmp_dtype(fid, compound, val)
             ),
-            "dimensions": val["_dims"],
+            "dimensions": [PurePosixPath(x).name for x in val["_dims"]],
             "contiguous": True,
             "fill_value": fillvalue,
         }
@@ -293,7 +309,7 @@ class TemplateNc(Template):
         return {
             "varname": key,
             "datatype": datatype,
-            "dimensions": val["_dims"],
+            "dimensions": [PurePosixPath(x).name for x in val["_dims"]],
             "fill_value": fillvalue,
             "compression": compression,
             "complevel": complevel,
@@ -329,7 +345,7 @@ class TemplateNc(Template):
                 # check number of unlimited dimensions
                 n_udim = 0
                 for coord in val["_dims"]:
-                    n_udim += int(get_dim_size(fid, pkey, coord) == 0)
+                    n_udim += int(get_dim_size(fid, pkey, PurePosixPath(coord)) == 0)
 
                 # currently, we can not handle more than one unlimited dimension
                 if n_udim > 1:
