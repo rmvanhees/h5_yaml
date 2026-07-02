@@ -125,7 +125,7 @@ class TemplateH5(Template):
 
         """
         value = (
-            f"h5yaml.{self.__class__.__name__}(TemplateH5),version={sw_version()}"
+            f"h5yaml.{self.__class__.__name__}(Template),version={sw_version()}"
             f",{'options=str_as_bytes' if self.str2bytes else ''}"
         )
         fid.attrs["_NCCreator"] = str2bytes(value) if self.str2bytes else value

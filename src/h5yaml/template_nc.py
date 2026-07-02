@@ -129,7 +129,7 @@ class TemplateNc(Template):
         """
         fid.setncattr(
             "_NCCreator",
-            (f"h5yaml.{self.__class__.__name__}(TemplateNc),version={sw_version()}"),
+            (f"h5yaml.{self.__class__.__name__}(Template),version={sw_version()}"),
         )
         for key, val in self.attrs_global.items():
             if val == "TBW":
