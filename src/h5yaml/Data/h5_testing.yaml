@@ -53,7 +53,7 @@ dimensions:
     _FillValue: -32767
     long_name: Attitude sample time (seconds of day)
     calendar: proleptic_gregorian
-    units: seconds since %Y-%m-%d %H:%M:%S
+    units: seconds since 2026-07-28
     valid_min: 0
     valid_max: 92400
 
