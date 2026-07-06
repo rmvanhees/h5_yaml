@@ -314,6 +314,9 @@ class TemplateH5(Template):
 
         ds_chunk = val.get("_chunks")
         if ds_chunk is not None and not isinstance(ds_chunk, bool):
+            if -1 in ds_chunk:
+                ii = ds_chunk.index(-1)
+                ds_chunk[ii] = ds_shape[ii]
             ds_chunk = tuple(ds_chunk)
         compression = None
         shuffle = False
@@ -333,8 +336,8 @@ class TemplateH5(Template):
             ) + "_vlen"
             if ds_name not in fid:
                 fid[ds_name] = h5py.vlen_dtype(ds_dtype)
-                ds_dtype = fid[ds_name]
-                fillvalue = None
+            ds_dtype = fid[ds_name]
+            fillvalue = None
 
         return {
             "name": key,
