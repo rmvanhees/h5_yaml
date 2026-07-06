@@ -305,7 +305,9 @@ class TemplateNc(Template):
         if ds_chunk is not None and not isinstance(ds_chunk, bool):
             if -1 in ds_chunk:
                 ii = ds_chunk.index(-1)
-                ds_chunk[ii] = fid[str(pkey)].shape[ii]
+                ds_chunk[ii] = int(
+                    get_dim_size(fid, pkey, PurePosixPath(val["_dims"][ii]))
+                )
             ds_chunk = tuple(ds_chunk)
 
         datatype = (
