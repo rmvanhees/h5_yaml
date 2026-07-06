@@ -318,6 +318,7 @@ class TemplateH5(Template):
                 ii = ds_chunk.index(-1)
                 ds_chunk[ii] = ds_shape[ii]
             ds_chunk = tuple(ds_chunk)
+
         compression = None
         shuffle = False
         # currently only gzip compression is supported

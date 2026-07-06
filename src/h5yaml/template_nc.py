@@ -245,6 +245,8 @@ class TemplateNc(Template):
 
         Parameters
         ----------
+        fid :  Dataset
+           netCDF4 file-pointer
         key :  str
            Name of the variable
         val :  dict
@@ -268,14 +270,20 @@ class TemplateNc(Template):
         }
 
     def __var_chunked(
-        self: TemplateNc, fid: Dataset, key: str, val: dict, compound: None | dict
+        self: TemplateNc,
+        fid: Dataset,
+        pkey: PurePosixPath,
+        val: dict,
+        compound: None | dict,
     ) -> dict:
         """Return parameters to create a variable with chunking.
 
         Parameters
         ----------
-        key :  str
-           Name of the variable
+        fid :  Dataset
+           netCDF4 file-pointer
+        pkey :  PurePosixPath
+           Variable name (full-path)
         val :  dict
            Properties of the variable
         compound :  None | dict
@@ -294,8 +302,11 @@ class TemplateNc(Template):
             complevel = val["_compression"]
 
         ds_chunk = val.get("_chunks")
-        if ds_chunk is not None:
-            ds_chunk = None if isinstance(ds_chunk, bool) else tuple(ds_chunk)
+        if ds_chunk is not None and not isinstance(ds_chunk, bool):
+            if -1 in ds_chunk:
+                ii = ds_chunk.index(-1)
+                ds_chunk[ii] = fid[str(pkey)].shape[ii]
+            ds_chunk = tuple(ds_chunk)
 
         datatype = (
             val["_dtype"] if compound is None else get_cmp_dtype(fid, compound, val)
@@ -307,7 +318,7 @@ class TemplateNc(Template):
             fillvalue = None
 
         return {
-            "varname": key,
+            "varname": pkey.name,
             "datatype": datatype,
             "dimensions": [PurePosixPath(x).name for x in val["_dims"]],
             "fill_value": fillvalue,
@@ -327,8 +338,7 @@ class TemplateNc(Template):
         """
         for key, val in self.variables.items():
             pkey = PurePosixPath(key)
-            var_grp = fid[pkey.parent] if pkey.is_absolute() else fid
-            var_name = pkey.name if pkey.is_absolute() else key
+            var_grp = fid[pkey.parent] if len(pkey.parents) > 1 else fid
 
             # check if dtype of variable is a compound
             compound = self.compounds.get(val["_dtype"], None)
@@ -336,7 +346,7 @@ class TemplateNc(Template):
             # create variable
             if val["_dims"][0] == "scalar":
                 dset = var_grp.createVariable(
-                    **self.__var_scalar(fid, var_name, val, compound)
+                    **self.__var_scalar(fid, pkey.name, val, compound)
                 )
                 # write data to variable (works currently only for scalar datasets)
                 if "_values" in val:
@@ -353,11 +363,11 @@ class TemplateNc(Template):
 
                 if val.get("_chunks") == "contiguous":
                     dset = var_grp.createVariable(
-                        **self.__var_nochunk(fid, var_name, val, compound)
+                        **self.__var_nochunk(fid, pkey.name, val, compound)
                     )
                 else:
                     dset = var_grp.createVariable(
-                        **self.__var_chunked(fid, var_name, val, compound)
+                        **self.__var_chunked(fid, pkey, val, compound)
                     )
 
             # add user-supplied attributes
