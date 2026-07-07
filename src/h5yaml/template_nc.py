@@ -302,13 +302,18 @@ class TemplateNc(Template):
             complevel = val["_compression"]
 
         ds_chunk = val.get("_chunks")
-        if ds_chunk is not None and not isinstance(ds_chunk, bool):
+        if isinstance(ds_chunk, bool):
+            ds_chunk = None
+        elif ds_chunk is not None:
             if -1 in ds_chunk:
-                ii = ds_chunk.index(-1)
-                ds_chunk[ii] = int(
-                    get_dim_size(fid, pkey, PurePosixPath(val["_dims"][ii]))
+                ds_chunk = tuple(
+                    int(get_dim_size(fid, pkey, PurePosixPath(val["_dims"][i])))
+                    if x == -1
+                    else x
+                    for i, x in enumerate(ds_chunk)
                 )
-            ds_chunk = tuple(ds_chunk)
+            else:
+                ds_chunk = tuple(ds_chunk)
 
         datatype = (
             val["_dtype"] if compound is None else get_cmp_dtype(fid, compound, val)
