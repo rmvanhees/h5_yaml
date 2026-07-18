@@ -132,7 +132,7 @@ class TemplateH5(Template):
         value = f"version=2,hdf5={h5py.version.hdf5_version}"
         fid.attrs["_NCProperties"] = str2bytes(value) if self.str2bytes else value
         for key, value in self.attrs_global.items():
-            if key in fid.attrs or value == "TBW":
+            if key in fid.attrs or (isinstance(value, str) and value == "TBW"):
                 continue
             if isinstance(value, str):
                 fid.attrs[key] = str2bytes(value) if self.str2bytes else value

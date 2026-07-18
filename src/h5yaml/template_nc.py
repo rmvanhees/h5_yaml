@@ -132,7 +132,7 @@ class TemplateNc(Template):
             (f"h5yaml.{self.__class__.__name__}(Template),version={sw_version()}"),
         )
         for key, val in self.attrs_global.items():
-            if val == "TBW":
+            if isinstance(val, str) and val == "TBW":
                 continue
 
             fid.setncattr(key, val)
