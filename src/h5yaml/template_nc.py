@@ -212,7 +212,7 @@ class TemplateNc(Template):
             )
 
     def __var_scalar(
-        self: TemplateNc, fid: Dataset, key: str, val: dict, compound: None | dict
+        self: TemplateNc, fid: Dataset, key: str, val: dict, compound: dict | None
     ) -> dict:
         """Return parameters to create a scalar variable.
 
@@ -239,7 +239,7 @@ class TemplateNc(Template):
         }
 
     def __var_nochunk(
-        self: TemplateNc, fid: Dataset, key: str, val: dict, compound: None | dict
+        self: TemplateNc, fid: Dataset, key: str, val: dict, compound: dict | None
     ) -> dict:
         """Return parameters to create a variable without chunking.
 
@@ -274,7 +274,7 @@ class TemplateNc(Template):
         fid: Dataset,
         pkey: PurePosixPath,
         val: dict,
-        compound: None | dict,
+        compound: dict | None,
     ) -> dict:
         """Return parameters to create a variable with chunking.
 
