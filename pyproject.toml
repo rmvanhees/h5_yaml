@@ -1,8 +1,8 @@
 # pyproject.toml
 [build-system]
 requires = [
-   "hatchling",
-   "versioningit",
+  "hatchling",
+  "versioningit",
 ]
 build-backend = "hatchling.build"
 
@@ -16,32 +16,37 @@ authors = [
 license = "Apache-2.0"
 requires-python = ">=3.12"
 classifiers = [
-   "Development Status :: 5 - Production/Stable",
-   "Intended Audience :: Developers",
-   "Intended Audience :: Science/Research",
-   "Operating System :: OS Independent",
-   "Programming Language :: Python :: 3 :: Only",
-   "Programming Language :: Python :: 3.12",
-   "Programming Language :: Python :: 3.13",
-   "Programming Language :: Python :: 3.14",
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 keywords = [
-   "HDF5", "netCDF4", "YAML", "CF metadata"
+  "HDF5", "netCDF4", "YAML", "CF metadata"
 ]
 dynamic = [
-   "version",
+  "version",
 ]
 dependencies = [
-   "h5py>=3.14",
-   "netCDF4>=1.7",
-   "numpy>=2.0",
-   "pyYAML>=6.0",
-   "pyyaml-include>=2.0",
+  "h5py>=3.14",
+  "netCDF4>=1.7",
+  "numpy>=2.0",
+  "pyYAML>=6.0",
+  "pyyaml-include>=2.0",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest >= 9.0"]
-test = ["pytest-cov >= 7.0"]
+[dependency-groups]
+test = [
+  "pytest>=9.0",
+  "pytest-cov>=7.0",
+]
+lint = [
+  "ruff>=0.15",
+]
 
 [project.scripts]
 
@@ -56,12 +61,13 @@ Issues = "https://github.com/rmvanhees/h5_yaml/issues"
 packages = ["src/h5yaml"]
 
 [tool.hatch.build.targets.sdist]
+exclude = ["pilots"]
 
 [tool.hatch.version]
 source = "versioningit"
 
 [tool.versioningit]
-default-version = "0.0"
+default-version = "0.0.0"
 
 [tool.versioningit.next-version]
 method = "smallest"
@@ -83,40 +89,43 @@ strict = true
 show_missing = true
 skip_empty = true
 exclude_also = [
-    # 1. Comments to turn coverage on and off:
-    'no cover: start(?s:.)*?no cover: stop',
+   # 1. Comments to turn coverage on and off:
+   'no cover: start(?s:.)*?no cover: stop',
 ]
 
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+exclude = [
+  "pilots",
+]
 
 [tool.ruff.lint]
 preview = false
 select = [
-   "D",    # pydocstyle
-   "E",    # pycodestyle
-   "F",    # pyflakes
-   "I",    # isort
-   "N",    # pep8-naming
-   "W",    # pycodestyle
-   "ANN",  # flake8-annotations
-   "A",    # flake8-builtins
-   "B",    # flake8-bugbear
-   "C4",   # flake8-comprehensions
-   "ISC",  # flake8-implicit-str-concat
-   "PGH",  # flake8-pie
-   "PT",   # flake8-pytest-style
-   "PYI",  # flake8-pyi
-   "Q",    # flake8-quotes
-   "S",    # flake8-bandit
-   "SIM",  # flake8-simplify
-   "TID",  # flake8-tidy-imports
-   "TCH",  # flake8-type-checking
-   "NPY",  # NumPy-specific
-   "PERF", # Perflint
-   "RUF",  # Ruff Specific
-   "UP",   # pyupgrade
+  "D",    # pydocstyle
+  "E",    # pycodestyle
+  "F",    # pyflakes
+  "I",    # isort
+  "N",    # pep8-naming
+  "W",    # pycodestyle
+  "A",    # flake8-builtins
+  "ANN",  # flake8-annotations
+  "B",    # flake8-bugbear
+  "C4",   # flake8-comprehensions
+  "ISC",  # flake8-implicit-str-concat
+  "PGH",  # flake8-pie
+  "PT",   # flake8-pytest-style
+  "PYI",  # flake8-pyi
+  "Q",    # flake8-quotes
+  "S",    # flake8-bandit
+  "SIM",  # flake8-simplify
+  "TID",  # flake8-tidy-imports
+  "TCH",  # flake8-type-checking
+  "NPY",  # NumPy-specific
+  "PERF", # Perflint
+  "RUF",  # Ruff Specific
+  "UP",   # pyupgrade
 ]
 
 [tool.ruff.lint.pydocstyle]
