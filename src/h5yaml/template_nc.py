@@ -437,7 +437,7 @@ class TemplateNc(Template):
 
         """
         try:
-            with open(filename, "wb") as ff:
+            with filename.open("wb") as ff:
                 _ = ff.write(fid.close())
         except PermissionError as exc:
             raise RuntimeError(f"failed to create {filename}") from exc
