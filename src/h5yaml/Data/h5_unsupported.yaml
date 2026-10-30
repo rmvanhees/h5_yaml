@@ -38,7 +38,7 @@ dimensions:
     units: seconds since 2026-07-28
     valid_min: 0
     valid_max: 92400
-    
+
 # Define variables
 variables:
   ds_01:

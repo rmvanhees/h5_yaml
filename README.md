@@ -129,7 +129,7 @@ The YAML file should be structured as follows:
  * The names of the attributes, groups, dimensions, compounds and variable should be specified as PosixPaths, however:
    * The names of groups should never start with a slash (always relative to root);
    * All other elements which are stored in root should also not start with a slash;
-   * Hoewever the non-group elements require a starting slash (absolute paths) when they are stored not the root. 
+   * Hoewever the non-group elements require a starting slash (absolute paths) when they are stored not the root.
  * The section 'groups' are optional, but you should provide each group you want to use
    in your file. The 'groups' section in the YAML file may look like this:
    ```
