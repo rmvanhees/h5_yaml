@@ -3,10 +3,11 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-yaml
+        exclude: h5_level_1a.yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.3
+    rev: v0.17.6
     hooks:
       - id: ruff-check
         args: [ --fix ]
