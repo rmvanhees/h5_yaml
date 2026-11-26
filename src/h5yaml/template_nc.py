@@ -1,7 +1,7 @@
 #
 # This file is part of Python package: `h5yaml`
 #
-#     https://github.com/rmvanhees/h5_yaml.git
+#     https://github.com/rmvanhees/h5yaml.git
 #
 # Copyright (c) 2025-2026 - R.M. van Hees (SRON)
 #    All rights reserved.
@@ -447,7 +447,7 @@ class TemplateNc(Template):
 
 def main() -> None:  # no cover: start
     """..."""
-    yaml_dir = Path.home() / "git" / "h5_yaml" / "src" / "h5yaml" / "Data"
+    yaml_dir = Path.home() / "git" / "h5yaml" / "src" / "h5yaml" / "Data"
     aa = TemplateNc(yaml_dir / "nc_testing.yaml")
 
     aa.to_disk(aa.diskless(), "file_nc_create2.nc")

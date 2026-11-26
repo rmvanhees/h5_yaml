@@ -51,11 +51,11 @@ lint = [
 [project.scripts]
 
 [project.urls]
-Homepage = "https://github.com/rmvanhees/h5_yaml"
-Source = "https://github.com/rmvanhees/h5_yaml"
-Issues = "https://github.com/rmvanhees/h5_yaml/issues"
-# Changelog = "https://github.com/rmvanhees/h5_yaml/ChangeLog"
-# Documentation = "https://h5_yaml.readthedocs.io/en/stable/"
+Homepage = "https://github.com/rmvanhees/h5yaml"
+Source = "https://github.com/rmvanhees/h5yaml"
+Issues = "https://github.com/rmvanhees/h5yaml/issues"
+# Changelog = "https://github.com/rmvanhees/h5yaml/ChangeLog"
+# Documentation = "https://h5yaml.readthedocs.io/en/stable/"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/h5yaml"]

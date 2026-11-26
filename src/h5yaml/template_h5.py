@@ -1,7 +1,7 @@
 #
 # This file is part of Python package: `h5yaml`
 #
-#     https://github.com/rmvanhees/h5_yaml.git
+#     https://github.com/rmvanhees/h5yaml.git
 #
 # Copyright (c) 2025-2026 - R.M. van Hees (SRON)
 #    All rights reserved.
@@ -467,7 +467,7 @@ class TemplateH5(Template):
 # no cover: start
 def main() -> None:
     """..."""
-    yaml_dir = Path.home() / "git" / "h5_yaml" / "src" / "h5yaml" / "Data"
+    yaml_dir = Path.home() / "git" / "h5yaml" / "src" / "h5yaml" / "Data"
     aa = TemplateH5(yaml_dir / "h5_testing.yaml")
     aa.to_disk(aa.diskless(), "file_h5_create2.h5")
 

@@ -1,7 +1,7 @@
 #
 # This file is part of Python package: `h5yaml`
 #
-#     https://github.com/rmvanhees/h5_yaml.git
+#     https://github.com/rmvanhees/h5yaml.git
 #
 # Copyright (c) 2026 - R.M. van Hees (SRON)
 #    All rights reserved.
